@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, onMounted, ref, unref, watch } from "vue"
 
 const emit = defineEmits(["gohome"])
 
@@ -17,122 +17,54 @@ interface LeaderboardStudent {
 }
 
 /* ================================
-   API
+   API (loads after the page shows)
 ================================ */
 
-const apiResponse = await useApiFetch("/leaderboard", {
-  method: "GET",
-})
+const data = ref<any>(null)
+const error = ref<any>(null)
+const pending = ref(true)
+const hasLoaded = ref(false) // becomes true once the API replies
 
-const data = apiResponse?.data ?? ref(null)
-const error = apiResponse?.error ?? ref(null)
-const pending = apiResponse?.pending ?? ref(false)
+const loadLeaderboard = async () => {
+  pending.value = true
+  error.value = null
+
+  try {
+    const response: any = await useApiFetch("/leaderboard", {
+      method: "GET",
+    })
+
+    // works whether the wrapper returns refs or plain values
+    data.value = unref(response?.data) ?? null
+    error.value = unref(response?.error) ?? null
+  } catch (err) {
+    console.error("Leaderboard request failed:", err)
+    error.value = err
+  } finally {
+    pending.value = false
+    hasLoaded.value = true
+  }
+}
+
+onMounted(() => {
+  void loadLeaderboard()
+})
 
 /* ================================
    FALLBACK DATA
 ================================ */
 
 const fallbackStudents: LeaderboardStudent[] = [
-  {
-    id: 1,
-    name: "Oyindamola",
-    location: "Lagos",
-    score: 373,
-    total: 400,
-    time: "00:37:45",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 2,
-    name: "Ojo Boluwatife",
-    location: "Ekiti",
-    score: 372,
-    total: 400,
-    time: "00:36:10",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 3,
-    name: "Adio Ibrahim Kayode",
-    location: "Lagos",
-    score: 308,
-    total: 400,
-    time: "01:55:32",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 4,
-    name: "Alabi Amirat",
-    location: "Kwara",
-    score: 293,
-    total: 400,
-    time: "00:12:13",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 5,
-    name: "Great Blessed",
-    location: "Lagos",
-    score: 280,
-    total: 400,
-    time: "01:26:11",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 6,
-    name: "Ucheagwu Ngozi Henrietta",
-    location: "Lagos",
-    score: 269,
-    total: 400,
-    time: "01:45:10",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 7,
-    name: "Ifeanyi-Obiejesi",
-    location: "Lagos",
-    score: 263,
-    total: 400,
-    time: "01:32:24",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 8,
-    name: "Demilade",
-    location: "Ogun",
-    score: 254,
-    total: 400,
-    time: "01:18:42",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 9,
-    name: "Abdulrahman Musa",
-    location: "Kano",
-    score: 248,
-    total: 400,
-    time: "01:10:25",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
-  {
-    id: 10,
-    name: "Esther Favour",
-    location: "Abia",
-    score: 241,
-    total: 400,
-    time: "01:04:18",
-    examType: "Exam Practice",
-    category: "Aggregate",
-  },
+  { id: 1, name: "Oyindamola", location: "Lagos", score: 373, total: 400, time: "00:37:45", examType: "Exam Practice", category: "Aggregate" },
+  { id: 2, name: "Ojo Boluwatife", location: "Ekiti", score: 372, total: 400, time: "00:36:10", examType: "Exam Practice", category: "Aggregate" },
+  { id: 3, name: "Adio Ibrahim Kayode", location: "Lagos", score: 308, total: 400, time: "01:55:32", examType: "Exam Practice", category: "Aggregate" },
+  { id: 4, name: "Alabi Amirat", location: "Kwara", score: 293, total: 400, time: "00:12:13", examType: "Exam Practice", category: "Aggregate" },
+  { id: 5, name: "Great Blessed", location: "Lagos", score: 280, total: 400, time: "01:26:11", examType: "Exam Practice", category: "Aggregate" },
+  { id: 6, name: "Ucheagwu Ngozi Henrietta", location: "Lagos", score: 269, total: 400, time: "01:45:10", examType: "Exam Practice", category: "Aggregate" },
+  { id: 7, name: "Ifeanyi-Obiejesi", location: "Lagos", score: 263, total: 400, time: "01:32:24", examType: "Exam Practice", category: "Aggregate" },
+  { id: 8, name: "Demilade", location: "Ogun", score: 254, total: 400, time: "01:18:42", examType: "Exam Practice", category: "Aggregate" },
+  { id: 9, name: "Abdulrahman Musa", location: "Kano", score: 248, total: 400, time: "01:10:25", examType: "Exam Practice", category: "Aggregate" },
+  { id: 10, name: "Esther Favour", location: "Abia", score: 241, total: 400, time: "01:04:18", examType: "Exam Practice", category: "Aggregate" },
 ]
 
 /* ================================
@@ -151,7 +83,12 @@ const itemsPerPage = 8
 ================================ */
 
 const students = computed<LeaderboardStudent[]>(() => {
-  const apiData = data?.value ?? null
+  // Before the request finishes (or if it failed), show the sample
+  if (!hasLoaded.value || error.value) {
+    return fallbackStudents
+  }
+
+  const apiData = data.value
 
   const result =
     apiData?.data?.leaderboard ??
@@ -182,17 +119,11 @@ const students = computed<LeaderboardStudent[]>(() => {
         "Unknown",
 
       score: Number(
-        student.score ??
-          student.totalScore ??
-          student.aggregate ??
-          0,
+        student.score ?? student.totalScore ?? student.aggregate ?? 0,
       ),
 
       total: Number(
-        student.total ??
-          student.maxScore ??
-          student.maximumScore ??
-          400,
+        student.total ?? student.maxScore ?? student.maximumScore ?? 400,
       ),
 
       time:
@@ -201,15 +132,9 @@ const students = computed<LeaderboardStudent[]>(() => {
         student.duration ??
         "00:00:00",
 
-      examType:
-        student.examType ??
-        student.exam_type ??
-        "Exam Practice",
+      examType: student.examType ?? student.exam_type ?? "Exam Practice",
 
-      category:
-        student.category ??
-        student.scoreType ??
-        "Aggregate",
+      category: student.category ?? student.scoreType ?? "Aggregate",
 
       avatar: student.avatar ?? null,
       trend: Number(student.trend ?? 0),
@@ -245,8 +170,7 @@ const filteredStudents = computed(() => {
         .join(" ")
         .toLowerCase()
 
-      const matchesSearch =
-        !query || searchableText.includes(query)
+      const matchesSearch = !query || searchableText.includes(query)
 
       return matchesExam && matchesCategory && matchesSearch
     })
@@ -258,26 +182,16 @@ const filteredStudents = computed(() => {
 ================================ */
 
 const totalPages = computed(() =>
-  Math.max(
-    1,
-    Math.ceil(
-      filteredStudents.value.length / itemsPerPage,
-    ),
-  ),
+  Math.max(1, Math.ceil(filteredStudents.value.length / itemsPerPage)),
 )
 
 const paginatedStudents = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
 
-  return filteredStudents.value.slice(
-    start,
-    start + itemsPerPage,
-  )
+  return filteredStudents.value.slice(start, start + itemsPerPage)
 })
 
-const topThree = computed(() =>
-  filteredStudents.value.slice(0, 3),
-)
+const topThree = computed(() => filteredStudents.value.slice(0, 3))
 
 /* ================================
    HELPERS
@@ -304,18 +218,9 @@ const getInitials = (name: string) => {
 }
 
 const getRankClass = (rank: number) => {
-  if (rank === 1) {
-    return "bg-[#b9873b]/15 text-[#b9873b]"
-  }
-
-  if (rank === 2) {
-    return "bg-slate-100 text-slate-600"
-  }
-
-  if (rank === 3) {
-    return "bg-orange-100 text-orange-700"
-  }
-
+  if (rank === 1) return "bg-[#b9873b]/15 text-[#b9873b]"
+  if (rank === 2) return "bg-slate-100 text-slate-600"
+  if (rank === 3) return "bg-orange-100 text-orange-700"
   return "bg-[#24304a]/10 text-[#24304a]"
 }
 
@@ -327,27 +232,20 @@ const resetFilters = () => {
 }
 
 const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
+  if (currentPage.value > 1) currentPage.value--
 }
 
 const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
+  if (currentPage.value < totalPages.value) currentPage.value++
 }
 
 const goHome = () => {
   emit("gohome")
 }
 
-watch(
-  [searchQuery, selectedExamType, selectedCategory],
-  () => {
-    currentPage.value = 1
-  },
-)
+watch([searchQuery, selectedExamType, selectedCategory], () => {
+  currentPage.value = 1
+})
 </script>
 
 <template>
@@ -414,15 +312,22 @@ watch(
           </p>
         </div>
 
-        <span
-          class="w-fit rounded-full bg-[#24304a]/10 px-3 py-1.5 text-xs font-medium text-[#24304a]"
-        >
-          {{ filteredStudents.length }} students
-        </span>
-      </section>
+        <div class="flex items-center gap-2">
+          <span
+            v-if="pending"
+            class="flex items-center gap-1.5 rounded-full bg-[#b9873b]/10 px-3 py-1.5 text-xs font-medium text-[#b9873b]"
+          >
+            <Icon name="lucide:loader-circle" size="13" class="animate-spin" />
+            Updating...
+          </span>
 
-      <!-- FILTERS -->
-      
+          <span
+            class="w-fit rounded-full bg-[#24304a]/10 px-3 py-1.5 text-xs font-medium text-[#24304a]"
+          >
+            {{ filteredStudents.length }} students
+          </span>
+        </div>
+      </section>
 
       <!-- TOP THREE -->
       <section
@@ -459,11 +364,7 @@ watch(
               </p>
             </div>
 
-            <Icon
-              name="lucide:trophy"
-              size="19"
-              class="text-[#b9873b]"
-            />
+            <Icon name="lucide:trophy" size="19" class="text-[#b9873b]" />
           </div>
 
           <div class="my-3 h-px bg-slate-100"></div>
@@ -500,34 +401,19 @@ watch(
           class="flex items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-5"
         >
           <div>
-            <h3 class="text-base font-medium text-[#24304a]">
-              Rankings
-            </h3>
+            <h3 class="text-base font-medium text-[#24304a]">Rankings</h3>
 
             <p class="mt-0.5 text-[11px] text-slate-400">
               Student performance
             </p>
           </div>
 
-          <Icon
-            name="lucide:chart-column"
-            size="20"
-            class="text-[#b9873b]"
-          />
-        </div>
-
-        <!-- LOADING -->
-        <div v-if="pending" class="space-y-2 p-4">
-          <div
-            v-for="item in 5"
-            :key="item"
-            class="h-14 animate-pulse rounded-xl bg-slate-100"
-          ></div>
+          <Icon name="lucide:chart-column" size="20" class="text-[#b9873b]" />
         </div>
 
         <!-- EMPTY -->
         <div
-          v-else-if="!paginatedStudents.length"
+          v-if="!paginatedStudents.length"
           class="px-5 py-14 text-center"
         >
           <Icon
@@ -593,9 +479,7 @@ watch(
                 </div>
 
                 <div class="min-w-0">
-                  <p
-                    class="truncate text-xs font-medium text-[#24304a]"
-                  >
+                  <p class="truncate text-xs font-medium text-[#24304a]">
                     {{ student.name }}
                   </p>
 
@@ -627,10 +511,7 @@ watch(
                     :style="{
                       width: `${
                         student.total
-                          ? Math.min(
-                              100,
-                              (student.score / student.total) * 100,
-                            )
+                          ? Math.min(100, (student.score / student.total) * 100)
                           : 0
                       }%`,
                     }"
@@ -663,9 +544,7 @@ watch(
 
               <!-- DETAILS -->
               <div class="min-w-0 flex-1">
-                <p
-                  class="truncate text-xs font-medium text-[#24304a]"
-                >
+                <p class="truncate text-xs font-medium text-[#24304a]">
                   {{ student.name }}
                 </p>
 
@@ -737,8 +616,6 @@ watch(
           </div>
         </div>
       </section>
-
-     
     </main>
   </div>
 </template>

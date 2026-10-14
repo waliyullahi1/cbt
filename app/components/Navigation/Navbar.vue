@@ -235,7 +235,7 @@ const handleMenuClick = (item: any) => {
   <!-- ========================================= -->
 
   <div
-    class="fixed  inset-0 z-[100] md:hidden"
+    class="fixed mt-5 inset-0 z-[100] md:hidden"
     :class="
       mobileMenuOpen || isDragging
         ? 'visible'
@@ -254,12 +254,12 @@ const handleMenuClick = (item: any) => {
 
     <!-- DRAWER -->
     <aside
-      class="relative flex h-full w-[280px] max-w-[85vw] flex-col bg-[#071936] text-white shadow-2xl"
+      class="relative  flex h-full w-[280px] max-w-[85vw] flex-col bg-[#071936] text-white shadow-2xl"
       :style="drawerStyle"
     >
       <!-- DRAWER HEADER -->
       <div
-        class="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5"
+        class="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5 pt-[env(safe-area-inset-top)]"
       >
         <div class="flex items-center gap-2">
           <div
@@ -343,9 +343,9 @@ const handleMenuClick = (item: any) => {
   <!-- MAIN HEADER -->
   <!-- ========================================= -->
 <div>
-  <header
-    class="fixed  inset-x-0 top-0 z-50 w-full bg-[#071936] text-white shadow-lg"
-  >
+<header
+  class="fixed inset-x-0 top-0 z-50 w-full bg-[#071936] pt-[env(safe-area-inset-top)] text-white shadow-lg"
+>
     <!-- TOP MENU - DESKTOP ONLY -->
     <div
       class="hidden h-8 items-center gap-6 border-b border-white/10 px-4 text-xs font-medium sm:flex sm:px-6 lg:px-8"
@@ -373,7 +373,7 @@ const handleMenuClick = (item: any) => {
 
     <!-- MAIN HEADER -->
     <div
-      class="flex min-h-[60px] items-center gap-2 px-2 sm:min-h-[64px] sm:gap-4 sm:px-6 lg:px-8"
+      class="flex min-h-[60px] p items-center gap-2 px-2 sm:min-h-[64px] sm:gap-4 sm:px-6 lg:px-8"
     >
       <!-- MOBILE HAMBURGER -->
       <button
@@ -386,7 +386,7 @@ const handleMenuClick = (item: any) => {
       </button>
 
       <!-- MOBILE BRAND -->
-      <div class="flex min-w-0 items-center gap-2 md:hidden">
+      <div class="flex min-w-0  items-center gap-2 md:hidden">
         <div
           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600"
         >

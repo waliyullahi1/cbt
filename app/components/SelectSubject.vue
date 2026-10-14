@@ -312,6 +312,7 @@ import {
   ref,
   watch
 } from 'vue'
+import { normalizeSubjectId } from '~/utils/subjectMeta'
 
 
 /* =========================================================
@@ -601,6 +602,7 @@ const normalizedSubjects = computed(() => {
         typeof item.subject === 'string'
           ? item.subject
           : item.id
+      const id = normalizeSubjectId(sourceId)
 
 
       return {
@@ -615,7 +617,7 @@ const normalizedSubjects = computed(() => {
          *
          * id
          */
-        id: String(sourceId),
+        id,
 
 
         /*
@@ -628,14 +630,16 @@ const normalizedSubjects = computed(() => {
          * English Language
          */
         name:
-          item.name || formatSubjectName(String(sourceId)),
+          id === 'english-language'
+            ? 'ENGLISH LANGUAGE'
+            : item.name || formatSubjectName(id),
 
 
         /*
          * Get icon automatically
          */
         icon:
-          subjectIcons[String(sourceId)] ||
+          subjectIcons[id] ||
           item.icon ||
           'lucide:book-open',
 
@@ -726,7 +730,7 @@ const syncSelectedSubjects = (value) => {
 
         return subjects.value.find(
           subject =>
-            subject.id === selected
+            subject.id === normalizeSubjectId(selected)
         )
 
       }
@@ -747,7 +751,7 @@ const syncSelectedSubjects = (value) => {
         const found =
           subjects.value.find(
             subject =>
-              subject.id === selected.id
+              subject.id === normalizeSubjectId(selected.id)
           )
 
 
@@ -811,7 +815,7 @@ watch(
 
           return subjects.value.find(
             subject =>
-              subject.id === selected.id
+              subject.id === normalizeSubjectId(selected.id)
           )
 
         })
@@ -1067,10 +1071,10 @@ const formatSubjectName = (subject) => {
       'Economics',
 
     english:
-      'English',
+      'ENGLISH LANGUAGE',
 
     'english-language':
-      'English Language',
+      'ENGLISH LANGUAGE',
 
     'fine-art':
       'Fine Art',

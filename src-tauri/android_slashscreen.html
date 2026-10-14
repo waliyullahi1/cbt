@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>ExamTips</title>
+
+    <style>
+      :root {
+        /* Change these to your real brand colours */
+        --bg: #0b1f3a;
+        --primary: #071936;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent; /* the window is transparent */
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      /* Plain solid card with rounded corners (the window has no frame) */
+      .splash {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        border-radius: 18px;
+        background: var(--bg);
+      }
+
+      .logo-wrap {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logo {
+        width: 76px;
+        height: 76px;
+        object-fit: contain;
+      }
+
+      /* Primary colour arc circling around the logo */
+      .ring {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        animation: spin 1.2s linear infinite;
+      }
+
+      .ring-track {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.12);
+        stroke-width: 3;
+      }
+
+      .ring-arc {
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 4;
+        stroke-linecap: round;
+        /* circumference ~ 2 * PI * 64 = 402 */
+        stroke-dasharray: 100 302;
+      }
+
+      .title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        color: #ffffff;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ring {
+          animation-duration: 3s;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="splash" role="status" aria-label="Loading">
+      <div class="logo-wrap">
+        <svg class="ring" viewBox="0 0 140 140" aria-hidden="true">
+          <circle class="ring-track" cx="70" cy="70" r="64" />
+          <circle class="ring-arc" cx="70" cy="70" r="64" />
+        </svg>
+
+        <img class="logo" src="images/logo.png" alt="" draggable="false" />
+      </div>
+
+
+    </div>
+  </body>
+</html>

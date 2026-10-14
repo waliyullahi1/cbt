@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 
 const appState = useAppState()
 
@@ -16,7 +16,7 @@ const currentUser = computed(() => {
 })
 
 // ==========================================
-// EXAM HISTORY
+// EXAM HISTORY (loads after the page shows)
 // ==========================================
 
 const {
@@ -26,7 +26,28 @@ const {
   remove,
 } = useExamHistory()
 
-await load()
+const loading = ref(true)
+const loadError = ref("")
+
+// showLoader = false means refresh quietly (used after delete)
+const loadHistories = async (showLoader = true) => {
+  if (showLoader) loading.value = true
+  loadError.value = ""
+
+  try {
+    await load()
+  } catch (error) {
+    console.error("Failed to load exam history:", error)
+    loadError.value =
+      error instanceof Error ? error.message : String(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  void loadHistories()
+})
 
 const sortedHistories = computed(() => {
   return [...(histories.value || [])].sort((a, b) => {
@@ -50,15 +71,59 @@ const hasNumber = (n: unknown): n is number => {
   return typeof n === "number" && !Number.isNaN(n)
 }
 
+const subjectNameFrom = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed || null
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value)
+  }
+
+  if (Array.isArray(value)) {
+    const names = value
+      .map(subjectNameFrom)
+      .filter((item): item is string => Boolean(item))
+
+    return names.length ? names.join(", ") : null
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, any>
+    const candidate =
+      record.name ||
+      record.subjectName ||
+      record.subject ||
+      record.title ||
+      record.label ||
+      record.id
+
+    return subjectNameFrom(candidate)
+  }
+
+  return null
+}
+
 const formatSubject = (s: unknown) => {
-  return String(s)
+  const text = subjectNameFrom(s) || "Unknown subject"
+
+  return text
     .replace(/-/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const subjectsFor = (exam: any) => {
   if (Array.isArray(exam.subjects) && exam.subjects.length) {
-    return exam.subjects
+    return [
+      ...new Set(
+        exam.subjects
+          .map((subject: any) => subjectNameFrom(subject))
+          .filter((name): name is string => Boolean(name))
+      ),
+    ]
   }
 
   if (!Array.isArray(exam.questions) || !exam.questions.length) {
@@ -68,8 +133,8 @@ const subjectsFor = (exam: any) => {
   return [
     ...new Set(
       exam.questions
-        .map((q: any) => q.subject)
-        .filter(Boolean)
+        .map((q: any) => subjectNameFrom(q.subject))
+        .filter((name): name is string => Boolean(name))
     ),
   ]
 }
@@ -95,9 +160,7 @@ const titleFor = (exam: any) => {
 const formatDate = (raw: unknown) => {
   if (!raw) return "Unknown date"
 
-  const d = new Date(
-    String(raw).replace(" ", "T")
-  )
+  const d = new Date(String(raw).replace(" ", "T"))
 
   if (Number.isNaN(d.getTime())) {
     return String(raw)
@@ -122,10 +185,7 @@ const round1 = (n: number) => {
 }
 
 const formatAggregate = (exam: any) => {
-  if (
-    !hasNumber(exam.aggregate) ||
-    !hasNumber(exam.maxAggregate)
-  ) {
+  if (!hasNumber(exam.aggregate) || !hasNumber(exam.maxAggregate)) {
     return "No aggregate"
   }
 
@@ -153,56 +213,10 @@ const timeFor = (exam: any) => {
 
 const bandClass = (pct: unknown) => {
   if (!hasNumber(pct)) return "seal--none"
-
   if (pct >= 70) return "seal--good"
-
   if (pct >= 50) return "seal--mid"
-
   return "seal--low"
 }
-
-// ==========================================
-// SUBJECTS
-// ==========================================
-
-const SUBJECTS = [
-  { id: "accounting", name: "Accounting", icon: "lucide:calculator" },
-  { id: "agriculture", name: "Agriculture", icon: "lucide:wheat" },
-  { id: "arabic", name: "Arabic", icon: "lucide:languages" },
-  { id: "biology", name: "Biology", icon: "lucide:dna" },
-  { id: "chemistry", name: "Chemistry", icon: "lucide:flask-conical" },
-  {
-    id: "christian-religious-studies",
-    name: "Christian Religious Studies",
-    icon: "lucide:church",
-  },
-  {
-    id: "civic-education",
-    name: "Civic Education",
-    icon: "lucide:landmark",
-  },
-  { id: "commerce", name: "Commerce", icon: "lucide:shopping-cart" },
-  { id: "computer-studies", name: "Computer Studies", icon: "lucide:monitor" },
-  { id: "economics", name: "Economics", icon: "lucide:chart-no-axes-combined" },
-  { id: "english", name: "English", icon: "lucide:book-open" },
-  { id: "fine-art", name: "Fine Art", icon: "lucide:palette" },
-  { id: "french", name: "French", icon: "lucide:languages" },
-  { id: "geography", name: "Geography", icon: "lucide:globe-2" },
-  { id: "government", name: "Government", icon: "lucide:building-2" },
-  { id: "hausa", name: "Hausa", icon: "lucide:languages" },
-  { id: "history", name: "History", icon: "lucide:scroll-text" },
-  { id: "home-economics", name: "Home Economics", icon: "lucide:house" },
-  { id: "igbo", name: "Igbo", icon: "lucide:languages" },
-  { id: "insurance", name: "Insurance", icon: "lucide:shield-check" },
-  {
-    id: "literature-in-english",
-    name: "Literature in English",
-    icon: "lucide:book-text",
-  },
-  { id: "mathematics", name: "Mathematics", icon: "lucide:sigma" },
-  { id: "marketing", name: "Marketing", icon: "lucide:megaphone" },
-  { id: "physics", name: "Physics", icon: "lucide:atom" },
-]
 
 // ==========================================
 // VIEW EXAM RESULT
@@ -217,9 +231,7 @@ const view = async (id: string | number) => {
       return
     }
 
-    const questions = Array.isArray(exam.questions)
-      ? exam.questions
-      : []
+    const questions = Array.isArray(exam.questions) ? exam.questions : []
 
     const subjectMap = questions.reduce(
       (groups: Record<string, any>, question: any) => {
@@ -265,21 +277,14 @@ const view = async (id: string | number) => {
       {}
     )
 
-    exam.subjects = Object.values(subjectMap).map(
-      (subject: any) => ({
-        ...subject,
-        score:
-          subject.total > 0
-            ? Number(
-                (
-                  (subject.correct / subject.total) *
-                  100
-                ).toFixed(2)
-              )
-            : 0,
-        maxScore: subject.total,
-      })
-    )
+    exam.subjects = Object.values(subjectMap).map((subject: any) => ({
+      ...subject,
+      score:
+        subject.total > 0
+          ? Number(((subject.correct / subject.total) * 100).toFixed(2))
+          : 0,
+      maxScore: subject.total,
+    }))
 
     appState.value.selectedSubjectsView = exam.subjects
     appState.value.examQuestionsView = exam.questions
@@ -302,15 +307,13 @@ const goHome = () => {
 }
 
 const deleteHistory = async (id: string | number) => {
-  const confirmed = confirm(
-    "Delete this exam history?"
-  )
+  const confirmed = confirm("Delete this exam history?")
 
   if (!confirmed) return
 
   try {
     await remove(id)
-    await load()
+    await loadHistories(false)
   } catch (error) {
     console.error("Failed to delete exam history:", error)
     alert("Unable to delete this record.")
@@ -320,35 +323,23 @@ const deleteHistory = async (id: string | number) => {
 
 <template>
   <div class="exam-history">
-    <!-- ========================================= -->
     <!-- HEADER -->
-    <!-- ========================================= -->
-
     <header class="eh-header">
-      <!-- BRAND -->
       <div class="eh-header__brand">
         <span class="eh-header__mark">
           <Icon name="lucide:scroll-text" />
         </span>
 
         <div class="min-w-0">
-          <h1 class="eh-header__title">
-            Exam Record
-          </h1>
+          <h1 class="eh-header__title">Exam Record</h1>
 
           <p class="eh-header__sub">
-            <span class="hidden sm:inline">
-              Every practice attempt, on file
-            </span>
-
-            <span class="sm:hidden">
-              Your practice history
-            </span>
+            <span class="hidden sm:inline">Every practice attempt, on file</span>
+            <span class="sm:hidden">Your practice history</span>
           </p>
         </div>
       </div>
 
-      <!-- HOME -->
       <button
         type="button"
         class="eh-header__home"
@@ -359,24 +350,22 @@ const deleteHistory = async (id: string | number) => {
       </button>
     </header>
 
-    <!-- ========================================= -->
     <!-- MAIN -->
-    <!-- ========================================= -->
-
     <main class="eh-main">
-      <!-- PAGE INTRO -->
-      <div
-        v-if="histories?.length"
-        class="eh-intro"
-      >
-        <div>
-          <p class="eh-intro__eyebrow">
-            PERFORMANCE ARCHIVE
-          </p>
+      <!-- ERROR BANNER -->
+      <div v-if="loadError" class="eh-error">
+        <span>Could not load your history.</span>
 
-          <h2 class="eh-intro__title">
-            Your exam history
-          </h2>
+        <button type="button" class="eh-error__retry" @click="loadHistories()">
+          Try again
+        </button>
+      </div>
+
+      <!-- PAGE INTRO -->
+      <div v-if="histories?.length" class="eh-intro">
+        <div>
+          <p class="eh-intro__eyebrow">PERFORMANCE ARCHIVE</p>
+          <h2 class="eh-intro__title">Your exam history</h2>
         </div>
 
         <span class="eh-count">
@@ -385,43 +374,52 @@ const deleteHistory = async (id: string | number) => {
         </span>
       </div>
 
+      <!-- LOADING SKELETONS -->
+      <ul v-if="loading && !histories?.length" class="ticket-list">
+        <li v-for="n in 3" :key="n" class="ticket ticket--skeleton">
+          <div class="ticket__top">
+            <div class="ticket__meta">
+              <div class="sk sk--line sk--short"></div>
+              <div class="sk sk--title"></div>
+              <div class="sk sk--line"></div>
+            </div>
+            <div class="sk sk--seal"></div>
+          </div>
+
+          <div class="ticket__perforation" role="presentation"></div>
+
+          <div class="ticket__stats">
+            <div v-for="i in 6" :key="i" class="sk sk--stat"></div>
+          </div>
+
+          <div class="ticket__actions">
+            <div class="sk sk--btn"></div>
+            <div class="sk sk--btn"></div>
+          </div>
+        </li>
+      </ul>
+
       <!-- EMPTY STATE -->
-      <div
-        v-if="!histories?.length"
-        class="eh-empty"
-      >
+      <div v-else-if="!histories?.length && !loadError" class="eh-empty">
         <div class="eh-empty__mark">
           <Icon name="lucide:scroll-text" />
         </div>
 
-        <h2 class="eh-empty__title">
-          No record yet
-        </h2>
+        <h2 class="eh-empty__title">No record yet</h2>
 
         <p class="eh-empty__sub">
           Finish a practice exam and it'll be filed here.
         </p>
 
-        <button
-          type="button"
-          class="empty-action"
-          @click="goHome"
-        >
+        <button type="button" class="empty-action" @click="goHome">
           <Icon name="lucide:arrow-left" />
           Start practicing
         </button>
       </div>
 
       <!-- HISTORY LIST -->
-      <ul
-        v-else
-        class="ticket-list"
-      >
-        <li
-          v-for="exam in sortedHistories"
-          :key="exam.id"
-          class="ticket"
-        >
+      <ul v-else-if="histories?.length" class="ticket-list">
+        <li v-for="exam in sortedHistories" :key="exam.id" class="ticket">
           <!-- TOP -->
           <div class="ticket__top">
             <div class="ticket__meta">
@@ -435,38 +433,19 @@ const deleteHistory = async (id: string | number) => {
                 {{ titleFor(exam) }}
               </h2>
 
-              <div
-                v-if="subjectsFor(exam).length"
-                class="ticket__chips"
-              >
-                <span
-                  v-for="s in subjectsFor(exam)"
-                  :key="s"
-                  class="chip"
-                >
+              <div v-if="subjectsFor(exam).length" class="ticket__chips">
+                <span v-for="s in subjectsFor(exam)" :key="s" class="chip">
                   {{ formatSubject(s) }}
                 </span>
               </div>
             </div>
 
             <!-- SCORE SEAL -->
-            <div
-              class="seal"
-              :class="bandClass(exam.percentage)"
-            >
+            <div class="seal" :class="bandClass(exam.percentage)">
               <span class="seal__ring">
                 <span class="seal__pct">
-                  {{
-                    hasNumber(exam.percentage)
-                      ? Math.round(exam.percentage)
-                      : "—"
-                  }}
-
-                  <small
-                    v-if="hasNumber(exam.percentage)"
-                  >
-                    %
-                  </small>
+                  {{ hasNumber(exam.percentage) ? Math.round(exam.percentage) : "—" }}
+                  <small v-if="hasNumber(exam.percentage)">%</small>
                 </span>
 
                 <span class="seal__agg">
@@ -477,10 +456,7 @@ const deleteHistory = async (id: string | number) => {
           </div>
 
           <!-- PERFORATION -->
-          <div
-            class="ticket__perforation"
-            role="presentation"
-          ></div>
+          <div class="ticket__perforation" role="presentation"></div>
 
           <!-- STATS -->
           <dl class="ticket__stats">
@@ -517,11 +493,7 @@ const deleteHistory = async (id: string | number) => {
 
           <!-- ACTIONS -->
           <div class="ticket__actions">
-            <button
-              type="button"
-              class="btn btn--primary"
-              @click="view(exam.id)"
-            >
+            <button type="button" class="btn btn--primary" @click="view(exam.id)">
               <Icon name="lucide:eye" />
               <span>View result</span>
             </button>
@@ -549,7 +521,6 @@ const deleteHistory = async (id: string | number) => {
     </main>
   </div>
 </template>
-
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap");
 
@@ -581,7 +552,95 @@ const deleteHistory = async (id: string | number) => {
 /* ==========================================
    HEADER
 ========================================== */
+/* ERROR BANNER */
+.eh-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto 1rem;
+  border: 1px solid var(--bad);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-size: 0.8rem;
+}
 
+.eh-error__retry {
+  flex-shrink: 0;
+  border: 1px solid var(--bad);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  background: transparent;
+  color: var(--bad);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* SKELETON CARDS */
+.ticket--skeleton:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.sk {
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--line) 25%,
+    #f1ecdf 50%,
+    var(--line) 75%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+}
+
+.sk--line {
+  height: 0.7rem;
+  width: 70%;
+  margin-top: 0.7rem;
+}
+
+.sk--short {
+  width: 40%;
+  margin-top: 0;
+}
+
+.sk--title {
+  height: 1.2rem;
+  width: 60%;
+  margin-top: 0.6rem;
+}
+
+.sk--seal {
+  width: 5rem;
+  height: 5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.sk--stat {
+  height: 3.2rem;
+  border-radius: 0.65rem;
+}
+
+.sk--btn {
+  height: 2.35rem;
+  width: 7rem;
+}
+
+@keyframes sk-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}
 .eh-header {
   display: flex;
   align-items: center;

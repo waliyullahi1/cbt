@@ -398,6 +398,7 @@
 import { ref, computed } from 'vue'
 import subjectsdetails  from '~/data/subjectdetail.js'
 import questions from '~/data/questions.js'
+import { normalizeSubjectId } from '~/utils/subjectMeta'
 const  {getQuestions} = useQuestionSearch()
 /*
 |--------------------------------------------------------------------------
@@ -461,8 +462,8 @@ const openTopicModal = (subject) => {
 }
 const selectedSubjects = ref([
    {
-    id: 'english',
-    name: 'English',
+    id: 'english-language',
+    name: 'ENGLISH LANGUAGE',
     icon: 'lucide:book-open'
   }
 ])
@@ -804,7 +805,9 @@ const createSubject = (subject) => {
     ...subject,
     year: details?.years?.at(-1) ?? "all",
     topics: [], // <-- add this
-    questions: subject.subject === "englisH" ? 60 : 40,
+    questions: normalizeSubjectId(
+      subject.id ?? subject.subject ?? subject.name
+    ) === "english-language" ? 60 : 40,
     questionOptions: [20, 30, 40, 50, 60, 70, 80, 90, 100]
   }
 }
@@ -1132,7 +1135,7 @@ console.log(examQuestions);
 
   appState.value.examQuestions = examQuestions
   saveUser()
-console.log( await getQuestions({subject:"english"  }) );
+console.log( await getQuestions({subject:"english-language"  }) );
 
   // Go to exam
   await navigateTo('/exam')
@@ -1150,7 +1153,11 @@ onMounted(() => {
 console.log(appState.value.selectedSubjects, 'appState.value.selectedSubjects');
 
 if (appState.value.selectedSubjects.length > 0) {
-  selectedSubjects.value = appState.value.selectedSubjects
+  selectedSubjects.value = appState.value.selectedSubjects.map((subject) =>
+    normalizeSubjectId(subject.id ?? subject.subject ?? subject.name) === "english-language"
+      ? { ...subject, id: "english-language", name: "ENGLISH LANGUAGE" }
+      : subject
+  )
 
       examDuration.value =appState.value.examSettings.duration 
       shuffleQuestions.value = appState.value.examSettings.shuffleQuestions 
@@ -1183,7 +1190,7 @@ watch(
       // default questions
         if (!subject.questions) {
           subject.questions =
-            subject.id === "english" ? 60 : 40
+            ["english", "english-language"].includes(subject.id) ? 60 : 40
         }
        
 

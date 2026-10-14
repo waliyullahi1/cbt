@@ -1,4 +1,3 @@
-
 <template>
   <div
     class="flex h-full min-h-0 flex-col overflow-hidden bg-white font-['Inter',system-ui,sans-serif] text-slate-800"
@@ -35,15 +34,22 @@
         <p class="truncate text-[10px] uppercase tracking-widest text-white/60">
           {{ breadcrumbSubject || "Learning" }}
 
-          <span v-if="breadcrumbTopic">
+          <span v-if="breadcrumbTopic && !lessonLoading">
             / {{ breadcrumbTopic }}
           </span>
         </p>
 
         <h1 class="truncate text-sm font-semibold sm:text-base">
-          {{ currentLesson?.title || selectedSubject?.name || "Learning" }}
+          {{ headerTitle }}
         </h1>
       </div>
+
+      <!-- LESSON LOADING SPINNER (top bar) -->
+      <Icon
+        v-if="lessonLoading"
+        name="lucide:loader-2"
+        class="h-4 w-4 shrink-0 animate-spin text-white/70"
+      />
 
       <!-- GLOBAL SEARCH -->
       <div class="relative hidden sm:block">
@@ -83,9 +89,16 @@
       </div>
     </div>
 
-    <!-- SUBJECT PROGRESS -->
-    <div class="h-1 w-full shrink-0 bg-slate-100">
+    <!-- SUBJECT PROGRESS / LOADING BAR -->
+    <div class="relative h-1 w-full shrink-0 overflow-hidden bg-slate-100">
+      <!-- Indeterminate bar while a lesson or the sidebar is loading -->
       <div
+        v-if="showMainLoading"
+        class="loading-bar absolute inset-y-0 w-1/3 bg-gold"
+      ></div>
+
+      <div
+        v-else
         class="h-full bg-gold transition-all duration-300"
         :style="{ width: `${progressPercent}%` }"
       ></div>
@@ -136,7 +149,8 @@
               </h2>
 
               <p class="mt-0.5 text-xs text-slate-500">
-                {{ totalLessons }} lessons
+                <span v-if="sidebarLoading">Loading...</span>
+                <span v-else>{{ totalLessons }} lessons</span>
               </p>
             </div>
           </div>
@@ -218,9 +232,29 @@
         <!-- ===================================================== -->
 
         <div class="py-3">
+          <!-- SIDEBAR LOADING -->
+          <div
+            v-if="sidebarLoading"
+            class="space-y-3 px-4 py-2"
+            role="status"
+            aria-live="polite"
+          >
+            <div
+              v-for="n in 4"
+              :key="n"
+              class="flex animate-pulse items-center gap-2"
+            >
+              <div class="h-4 w-4 shrink-0 rounded bg-slate-200"></div>
+              <div class="h-3 flex-1 rounded bg-slate-200"></div>
+              <div class="h-3 w-5 shrink-0 rounded bg-slate-200"></div>
+            </div>
+
+            <span class="sr-only">Loading topics...</span>
+          </div>
+
           <!-- NO TOPICS -->
           <div
-            v-if="!selectedSubjectTopics.length"
+            v-else-if="!selectedSubjectTopics.length"
             class="px-4 py-8 text-center"
           >
             <Icon
@@ -234,148 +268,158 @@
           </div>
 
           <!-- TOPIC LIST -->
-          <div
-            v-for="topic in selectedSubjectTopics"
-            :key="topic.id"
-            class="mb-2"
-          >
-            <!-- TOPIC HEADER -->
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 px-4 py-2 text-left transition hover:bg-white"
-              :class="
-                String(selectedTopicId) === String(topic.id)
-                  ? 'bg-white'
-                  : ''
-              "
-              @click="selectTopic(topic)"
+          <template v-else>
+            <div
+              v-for="topic in selectedSubjectTopics"
+              :key="topic.id"
+              class="mb-2" :class=" topic.lessons?.length ? 'block' : '  hidden '"
             >
-              <Icon
-                :name="
-                  String(selectedTopicId) === String(topic.id)
-                    ? 'lucide:folder-open'
-                    : 'lucide:folder'
-                "
-                class="h-4 w-4 shrink-0 text-gold"
-              />
-
-              <p
-                class="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide"
+              <!-- TOPIC HEADER -->
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left transition hover:bg-white"
                 :class="
                   String(selectedTopicId) === String(topic.id)
-                    ? 'text-navy'
-                    : 'text-slate-500'
+                    ? 'bg-white'
+                    : ''
                 "
-              >
-                {{ topic.title }}
-              </p>
-
-              <span class="text-[10px] text-slate-400">
-                {{ topic.lessons?.length || 0 }}
-              </span>
-
-              <Icon
-                :name="
-                  String(selectedTopicId) === String(topic.id)
-                    ? 'lucide:chevron-down'
-                    : 'lucide:chevron-right'
-                "
-                class="h-3.5 w-3.5 shrink-0 text-slate-400"
-              />
-            </button>
-
-            <!-- ================================================= -->
-            <!-- LESSONS -->
-            <!-- ================================================= -->
-
-            <div
-              v-if="String(selectedTopicId) === String(topic.id)"
-              class="space-y-0.5 border-t border-slate-100 bg-white/50 py-1"
-            >
-              <!-- LOADING -->
-              <div
-                v-if="topicLoading"
-                class="flex items-center gap-2 px-4 py-4 text-xs text-slate-400"
+                @click="selectTopic(topic)"
               >
                 <Icon
-                  name="lucide:loader-2"
-                  class="h-4 w-4 animate-spin"
-                />
-
-                Loading lessons...
-              </div>
-
-              <!-- EMPTY -->
-              <div
-                v-else-if="!filteredTopicLessons.length"
-                class="px-4 py-5 text-center"
-              >
-                <Icon
-                  name="lucide:search-x"
-                  class="mx-auto h-6 w-6 text-slate-300"
-                />
-
-                <p class="mt-2 text-[11px] text-slate-400">
-                  {{
-                    topicSearchTerm
-                      ? "No lessons match your search."
-                      : "No lessons available in this topic."
-                  }}
-                </p>
-              </div>
-
-              <!-- LESSONS -->
-              <template v-else>
-                <NuxtLink
-                  v-for="lesson in filteredTopicLessons"
-                  :key="lesson.id || lesson.slug"
-                  :to="lessonUrl(lesson)"
-                  class="group flex min-w-0 items-center gap-2 border-l-[3px] px-4 py-2.5 text-[13px] transition"
-                  :class="
-                    isCurrentLesson(lesson)
-                      ? 'border-navy bg-white font-semibold text-navy'
-                      : 'border-transparent text-slate-600 hover:bg-white hover:text-navy'
+                  :name="
+                    String(selectedTopicId) === String(topic.id)
+                      ? 'lucide:folder-open'
+                      : 'lucide:folder'
                   "
-                  @click="handleLessonNavigation"
+                  class="h-4 w-4 shrink-0 text-gold"
+                />
+
+                <p
+                  class="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide"
+                  :class="
+                    String(selectedTopicId) === String(topic.id)
+                      ? 'text-navy'
+                      : 'text-slate-500'
+                  "
+                >
+                  {{ topic.title }}
+                </p>
+
+                <span class="text-[10px] text-slate-400">
+                  {{ topic.lessons?.length || 0 }}
+                </span>
+
+                <Icon
+                  :name="
+                    String(selectedTopicId) === String(topic.id)
+                      ? 'lucide:chevron-down'
+                      : 'lucide:chevron-right'
+                  "
+                  class="h-3.5 w-3.5 shrink-0 text-slate-400"
+                />
+              </button>
+
+              <!-- ================================================= -->
+              <!-- LESSONS -->
+              <!-- ================================================= -->
+
+              <div
+                v-if="String(selectedTopicId) === String(topic.id)"
+                class="space-y-0.5 border-t border-slate-100 bg-white/50 py-1"
+              >
+                <!-- LOADING -->
+                <div
+                  v-if="topicLoading"
+                  class="flex items-center gap-2 px-4 py-4 text-xs text-slate-400"
                 >
                   <Icon
-                    name="lucide:file-text"
-                    class="h-4 w-4 shrink-0"
+                    name="lucide:loader-2"
+                    class="h-4 w-4 animate-spin"
+                  />
+
+                  Loading lessons...
+                </div>
+
+                <!-- EMPTY -->
+                <div
+                  v-else-if="!filteredTopicLessons.length"
+                  class="px-4 py-5 text-center"
+                >
+                  <Icon
+                    name="lucide:search-x"
+                    class="mx-auto h-6 w-6 text-slate-300"
+                  />
+
+                  <p class="mt-2 text-[11px] text-slate-400">
+                    {{
+                      topicSearchTerm
+                        ? "No lessons match your search."
+                        : "No lessons available in this topic."
+                    }}
+                  </p>
+                </div>
+
+                <!-- LESSONS -->
+                <template v-else>
+                  <NuxtLink
+                    v-for="lesson in filteredTopicLessons"
+                    :key="lesson.id || lesson.slug"
+                    :to="lessonUrl(lesson)"
+                    class="group flex min-w-0 items-center gap-2 border-l-[3px] px-4 py-2.5 text-[13px] transition"
                     :class="
                       isCurrentLesson(lesson)
-                        ? 'text-gold'
-                        : 'text-slate-400'
+                        ? 'border-navy bg-white font-semibold text-navy'
+                        : 'border-transparent text-slate-600 hover:bg-white hover:text-navy'
                     "
-                  />
-
-                  <span class="min-w-0 flex-1 truncate">
-                    {{ lesson.title }}
-                  </span>
-
-                  <span
-                    v-if="getCurrentLessonTime(lesson) > 0"
-                    class="hidden text-[9px] text-slate-400 xl:inline"
+                    @click="handleLessonNavigation"
                   >
-                    {{ formatReadingTime(getCurrentLessonTime(lesson)) }}
-                  </span>
+                    <!-- Spinner on the lesson that is currently loading -->
+                    <Icon
+                      v-if="lessonLoading && isCurrentLesson(lesson)"
+                      name="lucide:loader-2"
+                      class="h-4 w-4 shrink-0 animate-spin text-gold"
+                    />
 
-                  <Icon
-                    v-if="isCurrentLessonRead(lesson)"
-                    name="lucide:check-circle-2"
-                    class="h-4 w-4 shrink-0 text-emerald-500"
-                    title="Read"
-                  />
+                    <Icon
+                      v-else
+                      name="lucide:file-text"
+                      class="h-4 w-4 shrink-0"
+                      :class="
+                        isCurrentLesson(lesson)
+                          ? 'text-gold'
+                          : 'text-slate-400'
+                      "
+                    />
 
-                  <Icon
-                    v-else
-                    name="lucide:circle"
-                    class="h-4 w-4 shrink-0 text-slate-300"
-                    title="Unread"
-                  />
-                </NuxtLink>
-              </template>
+                    <span class="min-w-0 flex-1 truncate">
+                      {{ lesson.title }}
+                    </span>
+
+                    <span
+                      v-if="getCurrentLessonTime(lesson) > 0"
+                      class="hidden text-[9px] text-slate-400 xl:inline"
+                    >
+                      {{ formatReadingTime(getCurrentLessonTime(lesson)) }}
+                    </span>
+
+                    <Icon
+                      v-if="isCurrentLessonRead(lesson)"
+                      name="lucide:check-circle-2"
+                      class="h-4 w-4 shrink-0 text-emerald-500"
+                      title="Read"
+                    />
+
+                    <Icon
+                      v-else
+                      name="lucide:circle"
+                      class="h-4 w-4 shrink-0 text-slate-300"
+                      title="Unread"
+                    />
+                  </NuxtLink>
+                </template>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
       </aside>
 
@@ -496,6 +540,57 @@
         </div>
 
         <!-- ===================================================== -->
+        <!-- LESSON / PAGE LOADING                                 -->
+        <!-- Replaces the old content while a lesson is loading,   -->
+        <!-- so the previous lesson never stays on screen.         -->
+        <!-- ===================================================== -->
+
+        <div
+          v-else-if="showMainLoading"
+          class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-10 sm:py-10"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div class="flex items-center gap-3">
+            <Icon
+              name="lucide:loader-2"
+              class="h-6 w-6 shrink-0 animate-spin text-gold"
+            />
+
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-slate-700">
+                {{ lessonLoading ? "Loading lesson..." : "Loading learning materials..." }}
+              </p>
+
+              <p class="mt-0.5 text-xs text-slate-400">
+                Please wait a moment.
+              </p>
+            </div>
+          </div>
+
+          <!-- SKELETON -->
+          <div class="mt-8 animate-pulse space-y-4" aria-hidden="true">
+            <div class="h-3 w-40 rounded bg-slate-200"></div>
+            <div class="h-8 w-3/4 rounded bg-slate-200"></div>
+
+            <div class="space-y-2.5 pt-4">
+              <div class="h-3 w-full rounded bg-slate-100"></div>
+              <div class="h-3 w-full rounded bg-slate-100"></div>
+              <div class="h-3 w-5/6 rounded bg-slate-100"></div>
+            </div>
+
+            <div class="space-y-2.5 pt-4">
+              <div class="h-3 w-full rounded bg-slate-100"></div>
+              <div class="h-3 w-11/12 rounded bg-slate-100"></div>
+              <div class="h-3 w-2/3 rounded bg-slate-100"></div>
+            </div>
+
+            <div class="h-40 w-full rounded-xl bg-slate-100"></div>
+          </div>
+        </div>
+
+        <!-- ===================================================== -->
         <!-- SUBJECT LANDING -->
         <!-- ===================================================== -->
 
@@ -607,7 +702,7 @@
               :key="topic.id"
               type="button"
               class="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-navy hover:shadow-sm"
-              @click="selectTopic(topic)"
+              @click="selectTopic(topic, { openSidebar: true })"
             >
               <div class="flex items-center gap-2">
                 <Icon
@@ -941,24 +1036,6 @@
             ></div>
           </div>
         </article>
-
-        <!-- ===================================================== -->
-        <!-- LOADING -->
-        <!-- ===================================================== -->
-
-        <div
-          v-if="loading"
-          class="flex min-h-[300px] flex-col items-center justify-center"
-        >
-          <Icon
-            name="lucide:loader-2"
-            class="h-7 w-7 animate-spin text-slate-300"
-          />
-
-          <p class="mt-3 text-sm text-slate-400">
-            Loading learning materials...
-          </p>
-        </div>
       </main>
     </div>
 
@@ -1065,6 +1142,87 @@ const routeSegments = computed(() => {
   return [];
 });
 
+const routeSubjectSlug = computed(() => {
+  return routeSegments.value[0] || "";
+});
+
+const routeLessonSlug = computed(() => {
+  return routeSegments.value[1] || "";
+});
+
+/*
+|--------------------------------------------------------------------------
+| UI STATE
+|--------------------------------------------------------------------------
+*/
+
+const sidebarOpen = ref(false);
+
+const searchTerm = ref("");
+
+const showSearchResults = ref(false);
+
+const prevLesson = ref<any>(null);
+
+const nextLesson = ref<any>(null);
+
+const openSubjects = ref(new Set());
+
+/*
+|--------------------------------------------------------------------------
+| LOADING STATE
+|--------------------------------------------------------------------------
+| lessonLoading  -> a lesson is being fetched (starts true when the page
+|                   is opened directly on a lesson URL, so the subject
+|                   landing page never flashes first)
+| sidebarLoading -> subjects / topics / lessons list is being fetched
+|--------------------------------------------------------------------------
+*/
+
+const lessonLoading = ref(!!routeLessonSlug.value);
+
+const sidebarLoading = ref(true);
+
+// Guards against a slow, older request finishing after a newer one
+let lessonRequestId = 0;
+
+const showMainLoading = computed(() => {
+  return (
+    lessonLoading.value ||
+    (sidebarLoading.value && !currentLesson.value)
+  );
+});
+
+const headerTitle = computed(() => {
+  if (lessonLoading.value) {
+    return "Loading lesson...";
+  }
+
+  return (
+    currentLesson.value?.title ||
+    selectedSubject.value?.name ||
+    "Learning"
+  );
+});
+
+const fetchSidebar = async () => {
+  sidebarLoading.value = true;
+
+  try {
+    await loadSidebar();
+  } catch (error) {
+    console.error("Failed to load sidebar:", error);
+  } finally {
+    sidebarLoading.value = false;
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
+| LESSON COMPLETION OBSERVER
+|--------------------------------------------------------------------------
+*/
+
 const lessonCompletionTarget = ref<HTMLElement | null>(null);
 let lessonCompletionObserver: IntersectionObserver | null = null;
 
@@ -1074,15 +1232,16 @@ const observeLessonCompletion = async () => {
 
   if (
     !import.meta.client ||
+    lessonLoading.value ||
     !currentLesson.value ||
     (currentLesson.value.slug &&
       currentLesson.value.slug !== routeLessonSlug.value) ||
-    isLessonRead(currentSubjectKey.value, currentLesson.value) ||
-    !lessonCompletionTarget.value
+    isLessonRead(currentSubjectKey.value, currentLesson.value)
   ) {
     return;
   }
 
+  // Wait for the lesson article to render so the target element exists
   await nextTick();
 
   const target = lessonCompletionTarget.value;
@@ -1113,32 +1272,6 @@ const observeLessonCompletion = async () => {
 
   lessonCompletionObserver.observe(target);
 };
-
-const routeSubjectSlug = computed(() => {
-  return routeSegments.value[0] || "";
-});
-
-const routeLessonSlug = computed(() => {
-  return routeSegments.value[1] || "";
-});
-
-/*
-|--------------------------------------------------------------------------
-| UI STATE
-|--------------------------------------------------------------------------
-*/
-
-const sidebarOpen = ref(false);
-
-const searchTerm = ref("");
-
-const showSearchResults = ref(false);
-
-const prevLesson = ref<any>(null);
-
-const nextLesson = ref<any>(null);
-
-const openSubjects = ref(new Set());
 
 /*
 |--------------------------------------------------------------------------
@@ -1425,26 +1558,24 @@ const isCurrentLesson = (lesson: any) => {
 |--------------------------------------------------------------------------
 */
 
-const selectTopic = (topic: any) => {
+const selectTopic = (
+  topic: any,
+  options: { openSidebar?: boolean } = {},
+) => {
   if (!topic) return;
 
-  selectedTopicId.value = String(
-    topic.id,
-  );
+  selectedTopicId.value = String(topic.id);
 
   topicSearchTerm.value = "";
-
   searchTerm.value = "";
-
   showSearchResults.value = false;
-
   topicLoading.value = false;
 
-  if (
-    import.meta.client &&
-    window.innerWidth < 1024
-  ) {
-    sidebarOpen.value = false;
+  // Only open the sidebar when the topic was picked from the main page
+  // (the subject landing cards), so mobile users can then choose a lesson.
+  // A tap inside the sidebar leaves it open.
+  if (options.openSidebar) {
+    sidebarOpen.value = true;
   }
 };
 
@@ -1520,6 +1651,46 @@ const breadcrumbTopic = computed(() => {
 
 /*
 |--------------------------------------------------------------------------
+| SYNC SELECTED TOPIC WITH LESSON SLUG
+| Uses only sidebar data, so it can run before the lesson finishes loading.
+|--------------------------------------------------------------------------
+*/
+
+const syncSelectedTopic = (slug: string) => {
+  const owner = sidebar.value.find(
+    (subject: any) => {
+      return subject.topics?.some(
+        (topic: any) => {
+          return topic.lessons?.some(
+            (lesson: any) => lesson.slug === slug,
+          );
+        },
+      );
+    },
+  );
+
+  if (!owner) return;
+
+  openSubjects.value = new Set([
+    ...openSubjects.value,
+    owner.id,
+  ]);
+
+  const currentTopic = owner.topics?.find(
+    (topic: any) => {
+      return topic.lessons?.some(
+        (lesson: any) => lesson.slug === slug,
+      );
+    },
+  );
+
+  if (currentTopic) {
+    selectedTopicId.value = String(currentTopic.id);
+  }
+};
+
+/*
+|--------------------------------------------------------------------------
 | OPEN LESSON
 |--------------------------------------------------------------------------
 */
@@ -1527,6 +1698,8 @@ const breadcrumbTopic = computed(() => {
 const openLessonBySlug = async (
   slug: string,
 ) => {
+  const requestId = ++lessonRequestId;
+
   flushReadingTime();
 
   stopReadingTimer();
@@ -1540,81 +1713,61 @@ const openLessonBySlug = async (
 
     nextLesson.value = null;
 
+    lessonLoading.value = false;
+
     return;
   }
 
-  await loadLesson(slug);
+  // Show the loading state right away and clear stale prev / next buttons
+  lessonLoading.value = true;
 
-  if (currentLesson.value) {
-    recordLastOpenedLesson(
-      currentSubjectKey.value,
-      currentLesson.value,
-    );
+  prevLesson.value = null;
 
-    resetReadingTracker(
-      currentSubjectKey.value,
-      currentLesson.value,
-    );
-  }
+  nextLesson.value = null;
 
-  prevLesson.value =
-    await adjacentLesson("previous");
+  // Highlight the right topic in the sidebar immediately
+  syncSelectedTopic(slug);
 
-  nextLesson.value =
-    await adjacentLesson("next");
+  try {
+    await loadLesson(slug);
 
-  /*
-  |--------------------------------------------------------------------------
-  | FIND LESSON TOPIC
-  |--------------------------------------------------------------------------
-  */
+    // A newer lesson was requested while this one was loading
+    if (requestId !== lessonRequestId) return;
 
-  const owner = sidebar.value.find(
-    (subject: any) => {
-      return subject.topics?.some(
-        (topic: any) => {
-          return topic.lessons?.some(
-            (lesson: any) => {
-              return (
-                lesson.slug === slug
-              );
-            },
-          );
-        },
-      );
-    },
-  );
-
-  if (owner) {
-    openSubjects.value = new Set([
-      ...openSubjects.value,
-      owner.id,
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | FIND AND SELECT CURRENT TOPIC
-    |--------------------------------------------------------------------------
-    */
-
-    const currentTopic =
-      owner.topics?.find(
-        (topic: any) => {
-          return topic.lessons?.some(
-            (lesson: any) => {
-              return (
-                lesson.slug === slug
-              );
-            },
-          );
-        },
+    if (currentLesson.value) {
+      recordLastOpenedLesson(
+        currentSubjectKey.value,
+        currentLesson.value,
       );
 
-    if (currentTopic) {
-      selectedTopicId.value =
-        String(currentTopic.id);
+      resetReadingTracker(
+        currentSubjectKey.value,
+        currentLesson.value,
+      );
+    }
+  } catch (error) {
+    console.error("Failed to load lesson:", error);
+
+    return;
+  } finally {
+    // Only the latest request is allowed to hide the loading state
+    if (requestId === lessonRequestId) {
+      lessonLoading.value = false;
     }
   }
+
+  // Lesson content is visible now. Previous / Next load in the background.
+  const previous = await adjacentLesson("previous");
+
+  if (requestId !== lessonRequestId) return;
+
+  prevLesson.value = previous;
+
+  const next = await adjacentLesson("next");
+
+  if (requestId !== lessonRequestId) return;
+
+  nextLesson.value = next;
 };
 
 /*
@@ -1689,7 +1842,7 @@ const closeDelete = () => {
 const handleDeleted = async () => {
   showDelete.value = false;
 
-  await loadSidebar();
+  await fetchSidebar();
 
   if (currentLesson.value?.slug) {
     await openLessonBySlug(
@@ -1775,7 +1928,7 @@ const handleReadingVisibility =
   () => {
     if (document.visibilityState !== "visible" || !document.hasFocus()) {
       stopReadingTimer();
-    } else if (currentLesson.value) {
+    } else if (currentLesson.value && !lessonLoading.value) {
       resetReadingTracker(
         currentSubjectKey.value,
         currentLesson.value,
@@ -1835,10 +1988,13 @@ watch(
   },
 );
 
+// Re-attach the "mark as read" observer whenever the lesson article is
+// (re)rendered, including when the loading state ends.
 watch(
   () => [
     currentSubjectKey.value,
     currentLesson.value?.slug,
+    lessonLoading.value,
     isLessonRead(
       currentSubjectKey.value,
       currentLesson.value,
@@ -1868,7 +2024,7 @@ onMounted(async () => {
     window.addEventListener("focus", handleReadingWindowFocus);
   }
 
-  await loadSidebar();
+  await fetchSidebar();
 
   const lessonSlug =
     routeLessonSlug.value;
@@ -1877,6 +2033,8 @@ onMounted(async () => {
     await openLessonBySlug(
       lessonSlug,
     );
+  } else {
+    lessonLoading.value = false;
   }
 });
 
@@ -1913,5 +2071,28 @@ onBeforeUnmount(() => {
   display: block;
   content: "";
   margin-top: 0.7em;
+}
+
+/* Indeterminate loading bar under the top bar */
+.loading-bar {
+  animation: loading-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes loading-slide {
+  0% {
+    left: -35%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.6;
+  }
 }
 </style>

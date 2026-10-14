@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.app" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+
+    <style name="Theme.app.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/examtips_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_examtips_splash</item>
+        <item name="windowSplashScreenAnimationDuration">650</item>
+        <item name="postSplashScreenTheme">@style/Theme.app</item>
+    </style>
+</resources>

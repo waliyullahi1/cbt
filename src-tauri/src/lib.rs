@@ -31,38 +31,26 @@ fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
 pub fn run() {
     let builder = tauri::Builder::default()
 
+        .plugin(tauri_plugin_http::init())
+
         // ==========================================
-        // STRONGHOLD
+        // KEYRING STORAGE
         // ==========================================
         //
-        // Used for securely storing sensitive
-        // software credentials such as the
-        // Ed25519 private key.
+        // Securely stores the software private key and
+        // other secret material in the platform keychain.
         //
-        .setup(|app| {
-            let salt_path = app
-                .path()
-                .app_local_data_dir()
-                .expect(
-                    "Could not resolve app local data directory",
-                )
-                .join("stronghold-salt.txt");
-
-            app.handle()
-                .plugin(
-                    tauri_plugin_stronghold::Builder::with_argon2(
-                        &salt_path,
-                    )
-                    .build(),
-                )?;
-
-            Ok(())
-        })
+        .plugin(tauri_plugin_keyring_store::init())
 
         // ==========================================
         // OPENER
         // ==========================================
         .plugin(tauri_plugin_opener::init())
+
+        // ==========================================
+        // OPERATING SYSTEM
+        // ==========================================
+        .plugin(tauri_plugin_os::init())
 
         // Desktop-only: mobile operating systems manage app instances.
         ;
@@ -91,7 +79,8 @@ pub fn run() {
         // FILESYSTEM
         // ==========================================
         .plugin(tauri_plugin_fs::init())
-
+        .plugin(tauri_plugin_http::init())
+         .plugin(tauri_plugin_os::init())
         // ==========================================
         // LOGGING
         // ==========================================

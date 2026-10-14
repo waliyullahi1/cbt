@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-primary">
+  <div class="bg-primary sm:pt-0  ">
     <!-- ========================================= -->
     <!-- BOOKMARK SUCCESS MODAL -->
     <!-- ========================================= -->
@@ -46,7 +46,7 @@
     <!-- ========================================= -->
 
     <header
-      class="fixed inset-x-0 top-0 z-50 h-12 border-b border-white/10 bg-primary text-white shadow-lg"
+      class="fixed sm:pt-0 pt-6 inset-x-0 top-0 z-50 sm:h-12 h-14 border-b border-white/10 bg-primary text-white shadow-lg"
     >
       <div
         class="mx-auto flex h-full w-full items-center justify-between px-3 sm:px-6 lg:px-8"

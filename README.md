@@ -27,6 +27,16 @@ debugging and run:
 npm run android:dev
 ```
 
+The Android dev command forwards port 3000 through ADB and uses
+`localhost:3000` for the WebView dev server. Keep the device connected over
+ADB while using Android hot reload.
+
+Android uses the native launch splash on Android 12 and later. Its animated
+icon resources are kept in `src-tauri/android-splash/res` and are applied to
+the generated Tauri Android project automatically by the Android init, dev,
+APK, and AAB commands. The operating system controls splash duration; Android
+does not support a full-screen launch animation.
+
 The app keeps its SQLite databases and activation state in the app's private
 storage. Bundled database files are copied there on first launch; existing
 user databases are not overwritten. Android assigns a persistent installation

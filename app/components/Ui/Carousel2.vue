@@ -3,7 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const slides = [
   {
-    image: "/images/earn-money2x.webp",
+    image: "/images/earnmoney.webp",
     tag: "JAMB PREPARATION",
     title: "Prepare for JAMB with Confidence",
     description:
@@ -17,7 +17,7 @@ const slides = [
       "Learn smarter with expert lessons and practice tests.",
   },
   {
-    image: "/images/earn-money2x.webp",
+    image: "/images/earnmoney.webp",
     tag: "YOUR SUCCESS",
     title: "Every Question Takes You Closer",
     description:

@@ -25,6 +25,13 @@ export default defineNuxtPlugin(() => {
       console.log("🌐 Public page:", currentPath)
       return
     }
+    // if (!auth.isLoggedIn.value) {
+    //   await navigateTo("/activate", {
+    //     replace: true,
+    //   })
+    //   console.log("❌ Authentication required")
+    //   return
+    // }
 
     await navigateTo("/", {
       replace: true,

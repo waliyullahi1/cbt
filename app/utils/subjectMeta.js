@@ -81,7 +81,7 @@ export const SUBJECT_META = {
     text: "text-teal-600",
   },
 
-  english: {
+  "english-language": {
     icon: "lucide:book-open",
     bg: "bg-blue-100",
     text: "text-blue-600",
@@ -188,13 +188,17 @@ export function normalizeSubjectId(subject) {
     value = subject.id || subject.name || "";
   }
 
-  return String(value)
+  const normalized = String(value)
     .trim()
     .toLowerCase()
     .replace(/&/g, "and")
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
+  return normalized === "english"
+    ? "english-language"
+    : normalized;
 }
 
 

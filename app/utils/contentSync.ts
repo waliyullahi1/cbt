@@ -111,6 +111,17 @@ function normalizeId(value: any): string {
   return String(value).trim()
 }
 
+function normalizeQuestionSubject(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return ["english", "english language", "english-language"].includes(normalized)
+    ? "english-language"
+    : value
+}
+
 function getId(item: any): string {
   return normalizeId(item?.id ?? item?._id)
 }
@@ -365,6 +376,229 @@ function getTopicId(item: any): string {
   return normalizeId(value)
 }
 
+
+// ============================================================
+// REPLACE LESSON DATASET WITH LATEST CONTENT
+// ============================================================
+
+export async function replaceLessonsWithLatestData(
+  payload: {
+    subjects?: any[]
+    topics?: any[]
+    lessons?: any[]
+  } = {}
+): Promise<{
+  subjects: number
+  topics: number
+  lessons: number
+}> {
+  return runSequentially(async () => {
+    const hasSubjects = Array.isArray(payload.subjects)
+    const hasTopics = Array.isArray(payload.topics)
+    const hasLessons = Array.isArray(payload.lessons)
+
+    if (!hasSubjects && !hasTopics && !hasLessons) {
+      throw new Error(
+        "Lesson replacement requires at least one valid subjects, topics, or lessons array."
+      )
+    }
+
+    const subjects = hasSubjects ? payload.subjects! : []
+    const topics = hasTopics ? payload.topics! : []
+    const lessons = hasLessons ? payload.lessons! : []
+
+    const db = await getLessonsDB()
+
+    const subjectRows = subjects
+      .map((subject: any) => {
+        const id = getSubjectRecordId(subject)
+        const name = cleanText(subject?.name ?? subject?.title ?? subject?.subject)
+
+        if (!id || !name) {
+          return null
+        }
+
+        return [
+          id,
+          name,
+          cleanText(subject?.icon),
+          cleanText(subject?.description),
+          cleanOrderIndex(subject?.order_index ?? subject?.orderIndex),
+        ]
+      })
+      .filter(Boolean) as any[][]
+
+    const topicRows = topics
+      .map((topic: any) => {
+        const id = getTopicRecordId(topic)
+        const subjectId = getSubjectId(topic)
+        const title = cleanText(topic?.title ?? topic?.name)
+
+        if (!id || !subjectId || !title) {
+          return null
+        }
+
+        return [
+          id,
+          subjectId,
+          topic?.topic_number ?? topic?.topicNumber ?? null,
+          title,
+          cleanOrderIndex(topic?.order_index ?? topic?.orderIndex),
+        ]
+      })
+      .filter(Boolean) as any[][]
+
+    const lessonRows = lessons
+      .map((lesson: any) => {
+        const id = getLessonRecordId(lesson)
+        const topicId = getTopicId(lesson)
+        const subjectId = getSubjectId(lesson)
+        const title = cleanText(lesson?.title ?? lesson?.name)
+        const slug = cleanText(lesson?.slug)
+
+        if (!id || !topicId || !title || !slug) {
+          return null
+        }
+
+        const topicSubjectId = topicRows.find((row) => row[0] === topicId)?.[1]
+        const resolvedSubjectId = subjectId || topicSubjectId || null
+
+        if (!resolvedSubjectId) {
+          return null
+        }
+
+        const summary = cleanText(lesson?.summary)
+        const blocks = serializeBlocks(lesson?.blocks)
+        const teachingScore = scoreLessonForSelfStudy(
+          title,
+          summary,
+          blocks
+        )
+        const searchText = cleanText(
+          lesson?.search_text ??
+          lesson?.searchText
+        )
+
+        return [
+          id,
+          topicId,
+          resolvedSubjectId,
+          lesson?.topic_number ?? lesson?.topicNumber ?? null,
+          slug,
+          title,
+          summary,
+          blocks,
+          searchText,
+          cleanOrderIndex(lesson?.order_index ?? lesson?.orderIndex),
+          teachingScore.score,
+          teachingScore.level,
+          JSON.stringify(teachingScore.feedback),
+        ]
+      })
+      .filter(Boolean) as any[][]
+
+    const subjectIds = subjectRows.map((row) => row[0])
+    const topicIds = topicRows.map((row) => row[0])
+    const lessonIds = lessonRows.map((row) => row[0])
+
+    await db.execute("BEGIN TRANSACTION")
+
+    try {
+      if (lessonIds.length > 0) {
+        await db.execute(
+          `DELETE FROM lessons WHERE id NOT IN (${lessonIds.map(() => "?").join(", ")})`,
+          lessonIds
+        )
+      } else {
+        await db.execute("DELETE FROM lessons")
+      }
+
+      if (topicIds.length > 0) {
+        await db.execute(
+          `DELETE FROM topics WHERE id NOT IN (${topicIds.map(() => "?").join(", ")}) AND id NOT IN (SELECT DISTINCT topic_id FROM lessons)`,
+          topicIds
+        )
+      } else {
+        await db.execute("DELETE FROM topics WHERE id NOT IN (SELECT DISTINCT topic_id FROM lessons)")
+      }
+
+      if (subjectIds.length > 0) {
+        await db.execute(
+          `DELETE FROM subjects WHERE id NOT IN (${subjectIds.map(() => "?").join(", ")}) AND id NOT IN (SELECT DISTINCT subject_id FROM topics)`,
+          subjectIds
+        )
+      } else {
+        await db.execute("DELETE FROM subjects WHERE id NOT IN (SELECT DISTINCT subject_id FROM topics)")
+      }
+
+      if (subjectRows.length > 0) {
+        await executeRowsInBatches(
+          db,
+          "subjects",
+          ["id", "name", "icon", "description", "order_index"],
+          subjectRows
+        )
+      }
+
+      if (topicRows.length > 0) {
+        await executeRowsInBatches(
+          db,
+          "topics",
+          ["id", "subject_id", "topic_number", "title", "order_index"],
+          topicRows
+        )
+      }
+
+      if (lessonRows.length > 0) {
+        await saveLessonRows(db, [
+          "id",
+          "topic_id",
+          "subject_id",
+          "topic_number",
+          "slug",
+          "title",
+          "summary",
+          "blocks",
+          "search_text",
+          "order_index",
+          "teaching_score",
+          "teaching_level",
+          "teaching_feedback",
+        ], lessonRows)
+      }
+
+      const ftsTable = await db.select(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'lessons_fts' LIMIT 1`
+      )
+
+      if (ftsTable.length > 0) {
+        await db.execute("DELETE FROM lessons_fts")
+        await db.execute(`
+          INSERT INTO lessons_fts (
+            rowid,
+            title,
+            summary,
+            search_text
+          )
+          SELECT rowid, title, summary, search_text
+          FROM lessons
+        `)
+      }
+
+      await db.execute("COMMIT")
+
+      return {
+        subjects: subjectRows.length,
+        topics: topicRows.length,
+        lessons: lessonRows.length,
+      }
+    } catch (error) {
+      await db.execute("ROLLBACK")
+      console.error("❌ LESSON DATASET REPLACEMENT FAILED:", error)
+      throw error
+    }
+  })
+}
 
 // ============================================================
 // SAVE SUBJECTS
@@ -1193,7 +1427,7 @@ export async function saveQuestions(
               null,
 
               // 3
-              question?.subject ??
+              normalizeQuestionSubject(question?.subject) ??
               null,
 
               // 4
@@ -1668,42 +1902,22 @@ export async function saveAllContent({
 
 
       // ======================================================
-      // SUBJECTS
+      // SUBJECTS, TOPICS, LESSONS
       // ======================================================
 
       console.log("")
-      console.log("1️⃣ SUBJECTS")
+      console.log("1️⃣ REPLACING LESSON DATASET")
 
-      const subjectCount =
-        await saveSubjects(
-          subjects
-        )
+      const lessonDatasetResult =
+        await replaceLessonsWithLatestData({
+          subjects,
+          topics,
+          lessons,
+        })
 
-
-      // ======================================================
-      // TOPICS
-      // ======================================================
-
-      console.log("")
-      console.log("2️⃣ TOPICS")
-
-      const topicCount =
-        await saveTopics(
-          topics
-        )
-
-
-      // ======================================================
-      // LESSONS
-      // ======================================================
-
-      console.log("")
-      console.log("3️⃣ LESSONS")
-
-      const lessonCount =
-        await saveLearning(
-          lessons
-        )
+      const subjectCount = lessonDatasetResult.subjects
+      const topicCount = lessonDatasetResult.topics
+      const lessonCount = lessonDatasetResult.lessons
 
 
       // ======================================================

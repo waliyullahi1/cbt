@@ -688,22 +688,24 @@ import {
   secondsToDuration,
 } from "~/utils/examTime";
 
-const { getQuestions,  loadSubjects} = useQuestionSearch();
+const { getQuestions, loadSubjects } = useQuestionSearch();
 import {
   getSubjectMeta,
   getSubjectIcon,
   getSubjectColor,
   normalizeSubjectId,
 } from "~/utils/subjectMeta";
+
 /*
 |--------------------------------------------------------------------------
-| Emits & App   State
+| Emits & App State
 |--------------------------------------------------------------------------
 */
 
 const emit = defineEmits(["gohome"]);
 const appState = useAppState();
 const available = ref([]);
+
 /*
 |--------------------------------------------------------------------------
 | UI State
@@ -721,23 +723,18 @@ const isStarting = ref(false);
 
 /*
 |--------------------------------------------------------------------------
-| Exam Categories
+| Fetch Subjects
 |--------------------------------------------------------------------------
 */
 
 const fetchSubjects = async () => {
-
   try {
     const result = await loadSubjects();
-     available.value = result 
-   
+    available.value = result;
   } catch (error) {
-   
-  } finally {
-  
+    console.error("Failed to load subjects:", error);
   }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -746,21 +743,32 @@ const fetchSubjects = async () => {
 */
 
 const examModes = [
-  {
-    label: "Practice",
-    value: "practice",
-  },
-  {
-    label: "Exam",
-    value: "exam",
-  },
-  {
-    label: "Timed",
-    value: "timed",
-  },
+  { label: "Practice", value: "practice" },
+  { label: "Exam", value: "exam" },
+  { label: "Timed", value: "timed" },
 ];
 
+/*
+|--------------------------------------------------------------------------
+| Default Questions & Marks
+|--------------------------------------------------------------------------
+| English Language: 60 questions = 100 marks
+| Every other subject: 40 questions = 100 marks
+|--------------------------------------------------------------------------
+*/
 
+const MARKS_PER_SUBJECT = 100;
+const QUESTION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+const getDefaultQuestions = (id) =>
+  normalizeSubjectId(id) === "english-language" ? 60 : 40;
+
+// 100 marks at the default count, scaled if a different count is chosen
+const getSubjectMarks = (subject) =>
+  Math.round(
+    (Number(subject.questions || 0) / getDefaultQuestions(subject.id)) *
+      MARKS_PER_SUBJECT
+  );
 
 /*
 |--------------------------------------------------------------------------
@@ -770,8 +778,8 @@ const examModes = [
 
 const selectedSubjects = ref([
   {
-    id: "english",
-    name: "English",
+    id: "english-language",
+    name: "ENGLISH LANGUAGE",
     icon: "lucide:book-open",
     description: "Test your knowledge of English language and comprehension.",
   },
@@ -790,21 +798,11 @@ const durationHours = Array.from({ length: 100 }, (_, hour) => hour);
 const durationMinutes = Array.from({ length: 60 }, (_, minute) => minute);
 const examDuration = computed(() =>
   secondsToDuration(
-    examDurationHours.value * 3600 +
-      examDurationMinutes.value * 60
+    examDurationHours.value * 3600 + examDurationMinutes.value * 60
   )
 );
 const shuffleQuestions = ref(true);
 const shuffleOptions = ref(true);
-
-/*
-|--------------------------------------------------------------------------
-| All Available Subjects
-|--------------------------------------------------------------------------
-*/
-
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -815,18 +813,6 @@ const shuffleOptions = ref(true);
 const getSubjectDetails = (subject) => {
   return subjectsdetails.find((item) => item.id === subject.id);
 };
-
-
-
-
-
-/*
-|--------------------------------------------------------------------------
-| Subject Category Detection
-|--------------------------------------------------------------------------
-*/
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -853,13 +839,20 @@ const filteredSubjects = computed(() => {
 
 /*
 |--------------------------------------------------------------------------
-| Total Questions
+| Totals
 |--------------------------------------------------------------------------
 */
 
 const totalQuestions = computed(() => {
   return selectedSubjects.value.reduce(
     (total, subject) => total + Number(subject.questions || 0),
+    0
+  );
+});
+
+const totalMarks = computed(() => {
+  return selectedSubjects.value.reduce(
+    (total, subject) => total + getSubjectMarks(subject),
     0
   );
 });
@@ -872,7 +865,6 @@ const totalQuestions = computed(() => {
 
 const examModeLabel = computed(() => {
   const mode = examModes.find((item) => item.value === examMode.value);
-
   return mode?.label || "Practice";
 });
 
@@ -909,8 +901,8 @@ const createSubject = (subject) => {
     ...subject,
     year: details?.years?.at(-1) ?? "all",
     topics: [],
-    questions: subject.id === "english" ? 60 : 40,
-    questionOptions: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    questions: getDefaultQuestions(subject.id),
+    questionOptions: [...QUESTION_OPTIONS],
   };
 };
 
@@ -1023,8 +1015,7 @@ function shuffleQuestionOptions(question) {
 
 const startExam = async () => {
   if (isStarting.value) return;
-  console.log( selectedSubjects.value.length,'ffffffdddddaa');
-  
+
   appState.value.reviewQuestions = false;
 
   if (selectedSubjects.value.length === 0) {
@@ -1085,8 +1076,6 @@ const startExam = async () => {
 
     appState.value.examQuestions = examQuestions;
 
-  
-
     await navigateTo("/exam");
   } catch (error) {
     console.error("Failed to start exam:", error);
@@ -1095,33 +1084,6 @@ const startExam = async () => {
     isStarting.value = false;
   }
 };
-
-/*
-|--------------------------------------------------------------------------
-| Lifecycle
-|--------------------------------------------------------------------------
-*/
-
-onMounted(() => {
-  const savedSubjects = appState.value.selectedSubjects;
-
-  if (savedSubjects?.length > 0) {
-    selectedSubjects.value = savedSubjects;
-
-    const settings = appState.value.examSettings;
-
-    if (settings) {
-      examMode.value = settings.mode || "practice";
-      const durationSeconds = durationToSeconds(settings.duration);
-      examDurationHours.value = Math.floor(durationSeconds / 3600);
-      examDurationMinutes.value = Math.floor(
-        (durationSeconds % 3600) / 60
-      );
-      shuffleQuestions.value = settings.shuffleQuestions ?? true;
-      shuffleOptions.value = settings.shuffleOptions ?? true;
-    }
-  }
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -1144,11 +1106,11 @@ watch(
       }
 
       if (!subject.questions) {
-        subject.questions = subject.id === "english" ? 60 : 40;
+        subject.questions = getDefaultQuestions(subject.id);
       }
 
       if (!subject.questionOptions) {
-        subject.questionOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+        subject.questionOptions = [...QUESTION_OPTIONS];
       }
     });
   },
@@ -1168,7 +1130,35 @@ const goHome = () => {
   emit("gohome");
 };
 
+/*
+|--------------------------------------------------------------------------
+| Lifecycle
+|--------------------------------------------------------------------------
+*/
+
 onMounted(() => {
+  const savedSubjects = appState.value.selectedSubjects;
+
+  if (savedSubjects?.length > 0) {
+    selectedSubjects.value = savedSubjects.map((subject) =>
+      normalizeSubjectId(subject.id ?? subject.subject ?? subject.name) ===
+      "english-language"
+        ? { ...subject, id: "english-language", name: "ENGLISH LANGUAGE" }
+        : subject
+    );
+
+    const settings = appState.value.examSettings;
+
+    if (settings) {
+      examMode.value = settings.mode || "practice";
+      const durationSeconds = durationToSeconds(settings.duration);
+      examDurationHours.value = Math.floor(durationSeconds / 3600);
+      examDurationMinutes.value = Math.floor((durationSeconds % 3600) / 60);
+      shuffleQuestions.value = settings.shuffleQuestions ?? true;
+      shuffleOptions.value = settings.shuffleOptions ?? true;
+    }
+  }
+
   fetchSubjects();
 });
 </script>

@@ -2,6 +2,7 @@ import { ref } from "vue"
 import { toHtml, optionsToHtml } from "./formatHtml"
 import { getQuestionsDB } from "../utils/databases"
 import { isSoftwareActivated } from "./useSoftwareSecurity"
+import { normalizeSubjectId } from "../utils/subjectMeta"
 
 
 // =====================================================================
@@ -310,7 +311,7 @@ export function useQuestionSearch() {
 
       if (subject) {
         conditions.push("q.subject = ?")
-        params.push(subject)
+        params.push(normalizeSubjectId(subject))
       }
 
       if (year !== null && year !== undefined) {
@@ -1142,7 +1143,7 @@ export function useQuestionSearch() {
           ORDER BY topic COLLATE NOCASE
           `,
           [
-            subject.trim()
+            normalizeSubjectId(subject)
           ]
         )
 
@@ -1286,7 +1287,7 @@ export function useQuestionSearch() {
         )
 
         params.push(
-          subject
+          normalizeSubjectId(subject)
         )
       }
 

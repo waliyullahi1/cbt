@@ -191,7 +191,69 @@ const isLastQuestion = computed(() => {
 
 
 
-  
+  const questionButtonHidden = ref(false)
+const questionButtonPosition = ref({
+  right: 16,
+  bottom: 20,
+})
+
+const isDraggingQuestionButton = ref(false)
+
+let dragStartY = 0
+let dragStartX = 0
+let initialRight = 16
+let initialBottom = 20
+
+function startQuestionButtonDrag(event) {
+  isDraggingQuestionButton.value = true
+
+  const touch = event.touches?.[0] || event
+  dragStartX = touch.clientX
+  dragStartY = touch.clientY
+
+  initialRight = questionButtonPosition.value.right
+  initialBottom = questionButtonPosition.value.bottom
+}
+
+function moveQuestionButtonDrag(event) {
+  if (!isDraggingQuestionButton.value) return
+
+  const touch = event.touches?.[0] || event
+
+  const deltaX = dragStartX - touch.clientX
+  const deltaY = dragStartY - touch.clientY
+
+  questionButtonPosition.value = {
+    right: Math.max(
+      0,
+      Math.min(window.innerWidth - 70, initialRight + deltaX)
+    ),
+    bottom: Math.max(
+      0,
+      Math.min(window.innerHeight - 70, initialBottom - deltaY)
+    ),
+  }
+}
+
+function endQuestionButtonDrag() {
+  if (!isDraggingQuestionButton.value) return
+
+  isDraggingQuestionButton.value = false
+
+  // Drag close to the bottom edge to hide the button.
+  if (questionButtonPosition.value.bottom < 35) {
+    questionButtonHidden.value = true
+  }
+}
+
+function restoreQuestionButton() {
+  questionButtonHidden.value = false
+
+  questionButtonPosition.value = {
+    right: 16,
+    bottom: 20,
+  }
+}
 
  
   
@@ -288,7 +350,7 @@ console.log(appState.value.examQuestions);
   groupedSubjects.value.forEach(subject => {
      // JAMB total questions for this subject
   const jambQuestions =
-      subject.id === "english" ? 60 : 40
+      ["english", "english-language"].includes(subject.id) ? 60 : 40
       
         
     // Score out of 100
@@ -833,7 +895,7 @@ const getQuestionClass = (question, index) => {
           <!-- QUESTION BODY -->
           <div class="w-full flex-1 overflow-y-auto pb-4">
             <div class=" flex justify-between">  
-              <h3 class="mb-4 text-[clamp(14px,1vw,17px)] text-gray-700">
+              <h3 class="mb-4 text-[clamp(17px,1vw,17px)] text-gray-700">
               Question:
               {{ currentSubject?.currentQuestion || 0 }}/{{
                 currentSubject?.questions?.length || 0
@@ -843,7 +905,7 @@ const getQuestionClass = (question, index) => {
               <button
               v-if="!Submitted"
               @click="showSubmitModal = true"
-              class="rounded-sm bg-orange-800 h-fit sm:hidden block w-fit px-3 py-1 text-sm text-white"
+              class="rounded-sm bg-orange-800 h-fit sm:hidden block w-fit px-3 py-1 text-md text-white"
             >
               Submit
             </button>
@@ -851,7 +913,7 @@ const getQuestionClass = (question, index) => {
              <button
               v-if="Submitted"
               @click="showExamReport = true"
-              class="rounded-sm sm:hidden block bg-orange-800 h-fit w-fit px-3 py-1 text-sm text-white"
+              class="rounded-sm sm:hidden block bg-orange-800 h-fit w-fit px-3 py-1 text-md text-white"
             >
               Result
             </button>
@@ -925,7 +987,7 @@ const getQuestionClass = (question, index) => {
 
                   <!-- OPTION LETTER -->
                   <div
-                    class="flex sm:h-7 h-5 text-sm w-5 sm:w-7 shrink-0 items-center justify-center rounded-full border-2 font-medium uppercase transition-all"
+                    class="flex sm:h-7 h-7 text-lg w-7 sm:w-7 shrink-0 items-center justify-center rounded-full border-2 font-medium uppercase transition-all"
                     :class="[
                       Submitted &&
                       key === currentQuestion?.answer
@@ -945,7 +1007,7 @@ const getQuestionClass = (question, index) => {
 
                   <!-- OPTION TEXT -->
                   <span
-                    class="flex-1 text-sm  font-normal text-slate-800 sm:text-[17px]"
+                    class="flex-1 text-lg  font-normal text-slate-800 sm:text-[17px]"
                     :class="[
                       Submitted &&
                       key === currentQuestion?.answer
@@ -1187,7 +1249,7 @@ const getQuestionClass = (question, index) => {
   max-width: 100%;
   color: #24304a;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
   line-height: 1.7;
   overflow-wrap: anywhere;
@@ -1196,16 +1258,15 @@ const getQuestionClass = (question, index) => {
 
 /* Section / instruction */
 .question-section {
-  margin-bottom: 6px;
-  font-size: 14px;
+  margin-bottom: 10px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.7;
 }
-
 /* Main question */
 .question-content {
   margin-bottom: 8px;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
   line-height: 1.7;
 }
@@ -1376,12 +1437,12 @@ const getQuestionClass = (question, index) => {
 
 @media (max-width: 640px) {
   .question-section {
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.55;
   }
 
   .question-content {
-    font-size: 14px;
+    font-size: 17px;
     line-height: 1.65;
   }
 
@@ -1410,11 +1471,11 @@ const getQuestionClass = (question, index) => {
 
 @media (min-width: 640px) {
   .question-section {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .question-content {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.7;
   }
 }

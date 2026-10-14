@@ -7,10 +7,8 @@ import {
 } from "~/utils/contentDownloader"
 
 import {
-  saveSubjects,
-  saveTopics,
   saveQuestions,
-  saveLearning,
+  replaceLessonsWithLatestData,
 } from "~/utils/contentSync"
 
 import {
@@ -179,8 +177,6 @@ export function useContentSync() {
     const response =
       await fetchSubjects(token)
 
-    console.log(response);
-    
     const subjects =
       getItems(
         response,
@@ -189,19 +185,11 @@ export function useContentSync() {
           "items",
         ]
       )
-       console.log(subjects);
-      
-
-    if (subjects.length) {
-
-      await saveSubjects(
-        subjects
-      )
-    }
-
 
     subjectsDownloaded.value =
       subjects.length
+
+    return subjects
   }
 
 
@@ -231,16 +219,10 @@ export function useContentSync() {
       )
 
 
-    if (topics.length) {
-
-      await saveTopics(
-        topics
-      )
-    }
-
-
     topicsDownloaded.value =
       topics.length
+
+    return topics
   }
 
 
@@ -335,9 +317,7 @@ export function useContentSync() {
 
 
     let cursor = ""
-
-    let totalSaved = 0
-
+    const allLessons: any[] = []
 
     while (true) {
 
@@ -364,18 +344,10 @@ export function useContentSync() {
         break
       }
 
-
-      await saveLearning(
-        lessons
-      )
-
-
-      totalSaved +=
-        lessons.length
-
+      allLessons.push(...lessons)
 
       learningDownloaded.value =
-        totalSaved
+        allLessons.length
 
 
       const nextCursor =
@@ -397,6 +369,8 @@ export function useContentSync() {
         break
       }
     }
+
+    return allLessons
   }
 
 
@@ -487,9 +461,7 @@ export function useContentSync() {
       // SUBJECTS
       // ======================================================
 
-      await downloadSubjects(
-        token
-      )
+      const subjects = await downloadSubjects(token)
 
 
       // ======================================================
@@ -497,9 +469,7 @@ export function useContentSync() {
       // TOPICS
       // ======================================================
 
-      await downloadTopics(
-        token
-      )
+      const topics = await downloadTopics(token)
 
 
       // ======================================================
@@ -517,9 +487,13 @@ export function useContentSync() {
       // LESSONS
       // ======================================================
 
-      await downloadLearning(
-        token
-      )
+      const lessons = await downloadLearning(token)
+
+      await replaceLessonsWithLatestData({
+        subjects,
+        topics,
+        lessons,
+      })
 
 
       // ======================================================

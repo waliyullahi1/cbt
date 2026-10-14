@@ -18,6 +18,11 @@ logs
 .fleet
 .idea
 
+# Android release signing
+src-tauri/gen/android/keystore.properties
+*.jks
+*.keystore
+
 # Local env files
 .env
 .env.*

@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Emulator (Small_Phone)",
+      "type": "process",
+      "command": "${env:LOCALAPPDATA}\\Android\\Sdk\\emulator\\emulator.exe",
+      "args": ["-avd", "Small_Phone"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

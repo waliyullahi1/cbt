@@ -99,13 +99,13 @@
                 />
 
                 <h2
-                  class="text-[9px] font-extrabold leading-tight sm:text-sm"
+                  class="text-[15px] font-extrabold leading-tight sm:text-sm"
                 >
                   {{ item.title }}
                 </h2>
 
                 <p
-                  class="mt-1 line-clamp-2 overflow-hidden text-[8px] leading-tight opacity-70 sm:text-[11px]"
+                  class="mt-1 line-clamp-2 font-medium overflow-hidden text-[10px] leading-tight opacity-70 sm:text-[11px]"
                 >
                   {{ item.description }}
                 </p>

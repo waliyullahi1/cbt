@@ -1,5 +1,3 @@
-
-
 #[tauri::command]
 
 pub fn get_device_id() -> Result<String, String> {

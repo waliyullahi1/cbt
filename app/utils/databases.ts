@@ -444,6 +444,17 @@ async function initializeQuestionsDatabase(db: any) {
     ON questions(examType)
   `)
 
+  await db.execute(`
+    UPDATE questions
+    SET subject = 'english-language'
+    WHERE lower(trim(subject)) IN (
+      'english',
+      'english language',
+      'english-language'
+    )
+      AND subject != 'english-language'
+  `)
+
   console.log("✅ questions.db ready")
 }
 
@@ -984,8 +995,6 @@ async function initializeLessonsSchema(db: any) {
     )
   }
 
-  await seedStarterLessonData(db)
-
   console.log("✅ lessons.db ready")
 }
 
@@ -1015,7 +1024,8 @@ async function initializeDictionaryDatabase(
 async function openAndInitializeDatabase(
   name: DatabaseName,
   initialize: (db: SqlDatabase) => Promise<void>,
-  connectionString = `sqlite:${name}`
+  connectionString = `sqlite:${name}`,
+  readOnly = false,
 ): Promise<SqlDatabase> {
   if (databaseConnections[name]) {
     return databaseConnections[name]!
@@ -1023,17 +1033,39 @@ async function openAndInitializeDatabase(
 
   if (!databasePromises[name]) {
     databasePromises[name] = (async () => {
-      const db = await Database.load(connectionString)
+      console.info("[database] opening", {
+        database: name,
+        mode: readOnly ? "read-only bundled" : "writable application",
+      })
 
-      if (name !== "dictionary.db") {
-        await db.execute("PRAGMA busy_timeout = 10000")
-        await db.execute("PRAGMA journal_mode = WAL")
-        await db.execute("PRAGMA synchronous = NORMAL")
+      try {
+        const db = await Database.load(connectionString)
+
+        if (!readOnly) {
+          await db.execute("PRAGMA busy_timeout = 10000")
+          await db.execute("PRAGMA journal_mode = WAL")
+          await db.execute("PRAGMA synchronous = NORMAL")
+        }
+
+        await initialize(db)
+        databaseConnections[name] = db
+        console.info("[database] opened and validated", {
+          database: name,
+          mode: readOnly ? "read-only bundled" : "writable application",
+        })
+        return db
+      } catch (error) {
+        console.error("[database] open or initialization failed", {
+          database: name,
+          mode: readOnly ? "read-only bundled" : "writable application",
+          error,
+        })
+        throw new Error(
+          `Failed to open or initialize ${name}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        )
       }
-
-      await initialize(db)
-      databaseConnections[name] = db
-      return db
     })().catch((error) => {
       delete databasePromises[name]
       throw error
@@ -1052,8 +1084,8 @@ async function openBundledContentDatabase(
 
   if (!bundledContentPromises[name]) {
     bundledContentPromises[name] = (async () => {
-      const resourcePath = await resolveResource(`resources/${name}`)
-      const db = await Database.load(`sqlite:${resourcePath}?mode=ro`)
+      const connectionString = `sqlite:bundled-${name}?mode=ro`
+      const db = await Database.load(connectionString)
 
       if (name === "questions.db") {
         await db.select(`
@@ -1108,11 +1140,22 @@ async function openBundledContentDatabase(
       }
 
       bundledContentConnections[name] = db
-      console.info(`Using bundled read-only ${name} for an unsubscribed user`)
+      console.info("[database] bundled database opened read-only", {
+        database: name,
+      })
       return db
     })().catch((error) => {
+      console.error("[database] bundled database open or validation failed", {
+        database: name,
+        mode: "read-only bundled",
+        error,
+      })
       delete bundledContentPromises[name]
-      throw error
+      throw new Error(
+        `Failed to open or validate bundled ${name}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
     })
   }
 
@@ -1172,14 +1215,11 @@ export function getLessonsDB(): Promise<SqlDatabase> {
 // ============================================================
 
 export async function getDictDB(): Promise<SqlDatabase> {
-  const dictionaryResource = await resolveResource(
-    "resources/dictionary.db"
-  )
-
   return openAndInitializeDatabase(
     "dictionary.db",
     initializeDictionaryDatabase,
-    `sqlite:${dictionaryResource}`
+    "sqlite:bundled-dictionary.db?mode=ro",
+    true,
   )
 }
 
