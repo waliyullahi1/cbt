@@ -344,7 +344,7 @@ const handleMenuClick = (item: any) => {
   <!-- ========================================= -->
 <div>
 <header
-  class="fixed inset-x-0 top-0 z-50 w-full bg-[#071936] pt-[env(safe-area-inset-top)] text-white shadow-lg"
+  class="sm:fixed relative inset-x-0 top-0 z-50 w-full bg-[#071936]  text-white sm:shadow-lg"
 >
     <!-- TOP MENU - DESKTOP ONLY -->
     <div

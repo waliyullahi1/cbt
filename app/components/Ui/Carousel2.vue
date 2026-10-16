@@ -3,7 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const slides = [
   {
-    image: "/images/earnmoney.webp",
+    image: "/images/students-reading.webp",
     tag: "JAMB PREPARATION",
     title: "Prepare for JAMB with Confidence",
     description:
@@ -75,7 +75,7 @@ onBeforeUnmount(stopAutoplay);
 
 <template>
 <section
-  class="carousel group relative h-[150px] w-full overflow-hidden rounded-xl bg-slate-950 shadow-sm"
+  class="carousel group relative h-[170px] w-full overflow-hidden rounded-xl bg-slate-950 shadow-sm"
   @mouseenter="isPaused = true"
   @mouseleave="isPaused = false"
 >

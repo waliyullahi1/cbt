@@ -34,7 +34,7 @@
         <p class="truncate text-[10px] uppercase tracking-widest text-white/60">
           {{ breadcrumbSubject || "Learning" }}
 
-          <span v-if="breadcrumbTopic && !lessonLoading">
+          <span v-if="breadcrumbTopic && !lessonLoading && !lessonNotFound">
             / {{ breadcrumbTopic }}
           </span>
         </p>
@@ -591,6 +591,59 @@
         </div>
 
         <!-- ===================================================== -->
+        <!-- NO LESSON FOUND                                       -->
+        <!-- Shown when the lesson slug does not exist (or fails   -->
+        <!-- to load), instead of silently showing the subject     -->
+        <!-- landing page.                                         -->
+        <!-- ===================================================== -->
+
+        <div
+          v-else-if="lessonNotFound"
+          class="mx-auto w-full max-w-3xl px-4 py-16 text-center sm:px-10"
+          role="alert"
+        >
+          <Icon
+            name="lucide:file-x"
+            class="mx-auto h-12 w-12 text-slate-300"
+          />
+
+          <h2 class="mt-4 text-lg font-bold text-slate-700">
+            No lesson found
+          </h2>
+
+          <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+            This lesson does not exist or may have been removed. Choose another
+            lesson from the sidebar.
+          </p>
+
+          <p
+            v-if="lessonError"
+            class="mx-auto mt-3 max-w-sm break-words rounded-lg bg-slate-50 p-3 text-left text-[11px] text-slate-500"
+          >
+            {{ lessonError }}
+          </p>
+
+          <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              class="rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-navy/90"
+              @click="navigateTo(`/learning/${subjectSlug}`)"
+            >
+              Back to subject
+            </button>
+
+            <button
+              v-if="lessonError"
+              type="button"
+              class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+              @click="openLessonBySlug(routeLessonSlug)"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+
+        <!-- ===================================================== -->
         <!-- SUBJECT LANDING -->
         <!-- ===================================================== -->
 
@@ -770,7 +823,7 @@
 
             <!-- READ -->
             <span
-              v-if="isLessonRead(currentLesson)"
+              v-if="isCurrentLessonRead(currentLesson)"
               class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1.5 text-[10px] font-semibold text-emerald-600 sm:px-3 sm:text-xs"
             >
               <Icon
@@ -829,14 +882,14 @@
                 <div
                   class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
                   :class="
-                    isLessonRead(currentLesson)
+                    isCurrentLessonRead(currentLesson)
                       ? 'bg-emerald-100 text-emerald-600'
                       : 'bg-gold/10 text-gold'
                   "
                 >
                   <Icon
                     :name="
-                      isLessonRead(currentLesson)
+                      isCurrentLessonRead(currentLesson)
                         ? 'lucide:check-circle-2'
                         : 'lucide:book-open'
                     "
@@ -849,7 +902,7 @@
                     class="text-sm hidden font-bold text-slate-800 sm:text-base"
                   >
                     {{
-                      isLessonRead(currentLesson)
+                      isCurrentLessonRead(currentLesson)
                         ? "Reading completed"
                         : "Study this lesson"
                     }}
@@ -859,7 +912,7 @@
                     class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm"
                   >
                     {{
-                      isLessonRead(currentLesson)
+                      isCurrentLessonRead(currentLesson)
                         ? "Your active reading time has been saved for this lesson."
                         : "Read and understand the material. The lesson will be marked as read after 80% of the estimated reading time."
                     }}
@@ -870,12 +923,12 @@
               <span
                 class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-xs"
                 :class="
-                  isLessonRead(currentLesson)
+                  isCurrentLessonRead(currentLesson)
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-white text-slate-500'
                 "
               >
-                {{ isLessonRead(currentLesson) ? "Read" : "In progress" }}
+                {{ isCurrentLessonRead(currentLesson) ? "Read" : "In progress" }}
               </span>
             </div>
 
@@ -940,7 +993,7 @@
                 <div
                   class="h-full rounded-full transition-all duration-500"
                   :class="
-                    isLessonRead(currentLesson)
+                    isCurrentLessonRead(currentLesson)
                       ? 'bg-emerald-500'
                       : 'bg-gold'
                   "
@@ -951,7 +1004,7 @@
               </div>
 
               <p class="mt-2 text-[11px] leading-5 text-slate-500">
-                <span v-if="!isLessonRead(currentLesson)">
+                <span v-if="!isCurrentLessonRead(currentLesson)">
                   Scroll to the lesson navigation buttons to mark this lesson as read.
                 </span>
 
@@ -1176,12 +1229,18 @@ const openSubjects = ref(new Set());
 |                   is opened directly on a lesson URL, so the subject
 |                   landing page never flashes first)
 | sidebarLoading -> subjects / topics / lessons list is being fetched
+| lessonNotFound -> the lesson slug does not exist (or failed to load)
+| lessonError    -> error message when loading the lesson threw an error
 |--------------------------------------------------------------------------
 */
 
 const lessonLoading = ref(!!routeLessonSlug.value);
 
 const sidebarLoading = ref(true);
+
+const lessonNotFound = ref(false);
+
+const lessonError = ref("");
 
 // Guards against a slow, older request finishing after a newer one
 let lessonRequestId = 0;
@@ -1196,6 +1255,10 @@ const showMainLoading = computed(() => {
 const headerTitle = computed(() => {
   if (lessonLoading.value) {
     return "Loading lesson...";
+  }
+
+  if (lessonNotFound.value) {
+    return "Lesson not found";
   }
 
   return (
@@ -1233,6 +1296,7 @@ const observeLessonCompletion = async () => {
   if (
     !import.meta.client ||
     lessonLoading.value ||
+    lessonNotFound.value ||
     !currentLesson.value ||
     (currentLesson.value.slug &&
       currentLesson.value.slug !== routeLessonSlug.value) ||
@@ -1708,6 +1772,11 @@ const openLessonBySlug = async (
 
   showSearchResults.value = false;
 
+  // Clear any previous "no lesson" state before trying again
+  lessonNotFound.value = false;
+
+  lessonError.value = "";
+
   if (!slug) {
     prevLesson.value = null;
 
@@ -1734,19 +1803,39 @@ const openLessonBySlug = async (
     // A newer lesson was requested while this one was loading
     if (requestId !== lessonRequestId) return;
 
-    if (currentLesson.value) {
-      recordLastOpenedLesson(
-        currentSubjectKey.value,
-        currentLesson.value,
-      );
+    const lesson = currentLesson.value;
 
-      resetReadingTracker(
-        currentSubjectKey.value,
-        currentLesson.value,
-      );
+    // No lesson came back, or it is a leftover from a different lesson
+    if (
+      !lesson ||
+      (lesson.slug && String(lesson.slug) !== String(slug))
+    ) {
+      lessonNotFound.value = true;
+
+      return;
     }
+
+    recordLastOpenedLesson(
+      currentSubjectKey.value,
+      lesson,
+    );
+
+    resetReadingTracker(
+      currentSubjectKey.value,
+      lesson,
+    );
   } catch (error) {
+    // A newer request owns the screen now, so ignore this old failure
+    if (requestId !== lessonRequestId) return;
+
     console.error("Failed to load lesson:", error);
+
+    lessonNotFound.value = true;
+
+    lessonError.value =
+      error instanceof Error
+        ? error.message
+        : String(error);
 
     return;
   } finally {
@@ -1928,7 +2017,11 @@ const handleReadingVisibility =
   () => {
     if (document.visibilityState !== "visible" || !document.hasFocus()) {
       stopReadingTimer();
-    } else if (currentLesson.value && !lessonLoading.value) {
+    } else if (
+      currentLesson.value &&
+      !lessonLoading.value &&
+      !lessonNotFound.value
+    ) {
       resetReadingTracker(
         currentSubjectKey.value,
         currentLesson.value,
@@ -1995,6 +2088,7 @@ watch(
     currentSubjectKey.value,
     currentLesson.value?.slug,
     lessonLoading.value,
+    lessonNotFound.value,
     isLessonRead(
       currentSubjectKey.value,
       currentLesson.value,

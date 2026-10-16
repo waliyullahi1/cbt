@@ -99,6 +99,17 @@ export default defineNuxtConfig({
   nitro: { preset: "static" },
 
   css: ["~/assets/css/main.css"],
+  app: {
+    head: {
+      meta: [
+        {
+          name: "viewport",
+          // viewport-fit=cover is required for env(safe-area-inset-*) to work
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
+      ],
+    },
+  },
 
  devServer: {
     host: "0.0.0.0",
@@ -156,7 +167,7 @@ export default defineNuxtConfig({
     geminiApiKey: process.env.GEMINI_API_KEY || "",
 
     public: {
-      projectName: "cbt lesson",
+      projectName: " C lesson",
       apiUrl: 'http://localhost:5000'
         // "https://www.api.examtips.abanise.com",
     },

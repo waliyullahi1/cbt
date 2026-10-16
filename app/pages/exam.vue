@@ -341,7 +341,7 @@ console.log(appState.value.examQuestions);
   const unanswered = total - answered
 
   // ==================================
-  // JAMB MARK CALCULATION (2.5 marks/question)
+  // JAMB MARK CaALCULATION (2.5 marks/question)
   // ==================================
 
   let aggregate = 0

@@ -929,6 +929,7 @@ export async function getLesson(
     lesson.teaching_score === undefined
       ? Number.NaN
       : Number(lesson.teaching_score)
+
   const teachingEvaluation = Number.isFinite(savedTeachingScore)
     ? {
         score: savedTeachingScore,
@@ -941,20 +942,28 @@ export async function getLesson(
         lesson.blocks
       )
 
+  // Save the calculated score so it is only computed once.
+  // The bundled lessons database is read-only before activation,
+  // so this write can fail. The score is already calculated above,
+  // so a failed save must never stop the lesson from opening.
   if (!Number.isFinite(savedTeachingScore)) {
-    await db.execute(
-      `
-      UPDATE lessons
-      SET teaching_score = ?, teaching_level = ?, teaching_feedback = ?
-      WHERE id = ?
-      `,
-      [
-        teachingEvaluation.score,
-        teachingEvaluation.level,
-        JSON.stringify(teachingEvaluation.feedback),
-        lesson.id,
-      ]
-    )
+    try {
+      await db.execute(
+        `
+        UPDATE lessons
+        SET teaching_score = ?, teaching_level = ?, teaching_feedback = ?
+        WHERE id = ?
+        `,
+        [
+          teachingEvaluation.score,
+          teachingEvaluation.level,
+          JSON.stringify(teachingEvaluation.feedback),
+          lesson.id,
+        ]
+      )
+    } catch (error) {
+      console.warn("Could not cache teaching score:", error)
+    }
   }
 
 
