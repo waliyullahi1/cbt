@@ -98,7 +98,7 @@
                     {{ greeting }} <span aria-hidden="true">👋</span>
                   </h1>
                   <p class="mt-0.5 text-xs text-[#5B6E8F]">
-                    Ready 3 to improve your score?
+                    Ready to improve your score?
                   </p>
                 </div>
 
@@ -498,7 +498,7 @@ const updateGreeting = () => {
 
 const dashboardItems = [
   {
-    title: "Practice  D for UTME",
+    title: "Practice  for UTME",
     description: "Prepare for JAMB CBT",
     shortDescription: "Prepare for JAMB CBT",
     icon: "ph:note-pencil",
