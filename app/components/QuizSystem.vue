@@ -172,7 +172,7 @@ function renderMath(latex, displayMode = true) {
     console.error('KaTeX rendering error:', error)
 
     return `
-      <span class="text-red-600 text-sm">
+      <span class="text-[#0B2F6B] text-sm">
         ${String(latex)}
       </span>
     `
@@ -315,14 +315,13 @@ function solutionMath(question) {
 
 
 <template>
-
   <!-- ========================================================= -->
   <!-- EMPTY -->
   <!-- ========================================================= -->
 
   <div
     v-if="!questions.length"
-    class="rounded-lg border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500"
+    class="rounded-2xl bg-blue-50 p-5 text-center text-sm text-slate-500"
   >
     No practice questions available.
   </div>
@@ -335,160 +334,95 @@ function solutionMath(question) {
   <button
     v-else
     type="button"
+    class="flex h-10 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-4 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95"
     @click="openTest"
-    class="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-bold text-white transition hover:opacity-90"
   >
-
-    <Icon
-      name="lucide:clipboard-check"
-      class="h-4 w-4"
-    />
+    <Icon name="lucide:clipboard-check" class="h-4 w-4" />
 
     Test
-
   </button>
 
 
   <!-- ========================================================= -->
-  <!-- FIXED TEST POPUP -->
+  <!-- TEST POPUP (bottom sheet on phones, dialog on desktop) -->
   <!-- ========================================================= -->
 
   <Teleport to="body">
-
     <Transition name="test-modal">
-
       <div
         v-if="showTest && currentQuestion"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        class="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center sm:p-4"
       >
-
-        <!-- ================================================= -->
         <!-- BACKDROP -->
-        <!-- ================================================= -->
-
         <div
-          class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          class="absolute inset-0 bg-black/50 backdrop-blur-sm"
           @click="closeTest"
         ></div>
 
-
-        <!-- ================================================= -->
         <!-- MODAL -->
-        <!-- ================================================= -->
-
         <div
-          class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          class="test-panel relative z-10 flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[10px] bg-white font-['Inter',system-ui,sans-serif] shadow-2xl sm:max-h-[90dvh] sm:rounded-3xl"
         >
-
-          <!-- ================================================= -->
           <!-- HEADER -->
-          <!-- ================================================= -->
-
           <div
-            class="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4"
+            class="flex shrink-0 items-center justify-between bg-[#0B2F6B] px-4 py-3 text-white sm:px-5 sm:py-4"
           >
-
             <div>
-
-              <p
-                class="text-xs font-semibold uppercase tracking-wide text-slate-500"
-              >
+              <p class="text-[10px] font-bold uppercase tracking-widest text-white/65">
                 Test
               </p>
 
-              <h2
-                class="mt-1 text-base font-bold text-slate-800"
-              >
+              <h2 class="mt-0.5 text-base font-bold tabular-nums">
                 Question {{ currentIndex + 1 }}
                 of
                 {{ questions.length }}
               </h2>
-
             </div>
 
-
             <!-- CLOSE -->
-
             <button
               type="button"
-              @click="closeTest"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-200 hover:text-slate-800"
+              class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20 active:scale-95"
               aria-label="Close test"
+              @click="closeTest"
             >
-
-              <Icon
-                name="lucide:x"
-                class="h-5 w-5"
-              />
-
+              <Icon name="lucide:x" class="h-5 w-5" />
             </button>
-
           </div>
 
-
-          <!-- ================================================= -->
           <!-- PROGRESS -->
-          <!-- ================================================= -->
-
-          <div class="h-1 bg-slate-100">
-
+          <div class="h-1 shrink-0 bg-blue-100">
             <div
-              class="h-full bg-primary transition-all duration-300"
+              class="h-full rounded-r-full bg-[#0A6CFF] transition-all duration-300"
               :style="{ width: `${progress}%` }"
             ></div>
-
           </div>
 
-
-          <!-- ================================================= -->
-          <!-- MODAL CONTENT -->
-          <!-- ================================================= -->
-
-          <div class="overflow-y-auto p-5">
-
-
-            <!-- ================================================= -->
+          <!-- MODAL CONTENT (this is the part that scrolls) -->
+          <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:p-5">
             <!-- QUESTION -->
-            <!-- ================================================= -->
-
-            <div class="mb-6">
-
+            <div class="mb-5">
               <!-- Question text -->
-
               <div
                 v-if="questionText(currentQuestion)"
-                class="text-lg font-semibold leading-8 text-slate-800"
+                class="rich break-words text-base font-semibold leading-relaxed text-[#0B2F6B] sm:text-lg"
                 v-html="questionText(currentQuestion)"
               ></div>
 
-
               <!-- Question matrix / formula -->
-
               <div
                 v-if="questionMath(currentQuestion)"
-                class="mt-5 overflow-x-auto rounded-lg bg-slate-50 px-4 py-6"
+                class="mt-4 overflow-x-auto rounded-2xl bg-blue-50 px-3 py-5"
               >
-
                 <div
-                  class="flex min-w-max justify-center text-slate-900"
-                  v-html="
-                    renderMathObject(
-                      questionMath(currentQuestion)
-                    )
-                  "
+                  class="flex min-w-max justify-center text-[#0B2F6B]"
+                  v-html="renderMathObject(questionMath(currentQuestion))"
                 ></div>
-
               </div>
-
             </div>
 
-
-            <!-- ================================================= -->
             <!-- OPTIONS -->
-            <!-- ================================================= -->
-
-            <div class="space-y-3">
-
+            <div class="space-y-2">
               <button
                 v-for="([key, value]) in Object.entries(
                   currentQuestion.options || {}
@@ -496,101 +430,67 @@ function solutionMath(question) {
                 :key="key"
                 type="button"
                 :disabled="checked"
-                @click="selectAnswer(key)"
-                class="group flex w-full items-start gap-3 rounded-lg border p-3 text-left transition"
+                class="flex w-full items-start gap-3 rounded-2xl border-[1.5px] p-3 text-left transition active:scale-[0.99]"
                 :class="[
-
                   checked && key === currentQuestion.answer
-                    ? 'border-emerald-500 bg-emerald-50'
-
-                  : checked &&
-                    key === selectedAnswer &&
-                    key !== currentQuestion.answer
-                    ? 'border-red-500 bg-red-50'
-
-                  : selectedAnswer === key
-                    ? 'border-primary bg-primary/5'
-
-                  : 'border-slate-200 hover:border-primary/50 hover:bg-slate-50'
-
-                ]"
-              >
-
-                <!-- OPTION LETTER -->
-
-                <span
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold"
-                  :class="[
-
-                    checked && key === currentQuestion.answer
-                      ? 'border-emerald-600 bg-emerald-600 text-white'
-
+                    ? 'border-[#0A6CFF] bg-blue-50'
                     : checked &&
-                      key === selectedAnswer &&
-                      key !== currentQuestion.answer
-                      ? 'border-red-600 bg-red-600 text-white'
-
-                    : selectedAnswer === key
-                      ? 'border-primary bg-primary text-white'
-
-                    : 'border-slate-300 text-slate-600'
-
+                        key === selectedAnswer &&
+                        key !== currentQuestion.answer
+                      ? 'border-[#0B2F6B] bg-slate-100'
+                      : selectedAnswer === key
+                        ? 'border-[#0A6CFF] bg-blue-50'
+                        : 'border-blue-100 bg-white hover:bg-blue-50/60'
+                ]"
+                @click="selectAnswer(key)"
+              >
+                <!-- OPTION LETTER -->
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                  :class="[
+                    checked && key === currentQuestion.answer
+                      ? 'bg-[#0A6CFF] text-white'
+                      : checked &&
+                          key === selectedAnswer &&
+                          key !== currentQuestion.answer
+                        ? 'bg-[#0B2F6B] text-white'
+                        : selectedAnswer === key
+                          ? 'bg-[#0A6CFF] text-white'
+                          : 'border-2 border-blue-200 bg-white text-slate-500'
                   ]"
                 >
-
                   {{ key }}
-
                 </span>
 
-
                 <!-- OPTION CONTENT -->
-
                 <div class="min-w-0 flex-1">
-
                   <!-- Normal option text -->
-
                   <div
                     v-if="optionText(value)"
-                    class="text-[15px] leading-6 text-slate-700"
+                    class="rich break-words text-[15px] leading-snug text-[#201F22]"
                     v-html="optionText(value)"
                   ></div>
 
-
                   <!-- Option matrix / formula -->
-
                   <div
                     v-if="optionMath(value)"
-                    class="mt-3 overflow-x-auto rounded-md bg-white px-3 py-4"
+                    class="mt-3 overflow-x-auto rounded-xl bg-white px-3 py-4"
                   >
-
                     <div
-                      class="flex min-w-max justify-center text-slate-900"
-                      v-html="
-                        renderMathObject(
-                          optionMath(value)
-                        )
-                      "
+                      class="flex min-w-max justify-center text-[#0B2F6B]"
+                      v-html="renderMathObject(optionMath(value))"
                     ></div>
-
                   </div>
-
                 </div>
 
-
                 <!-- CORRECT -->
-
                 <Icon
-                  v-if="
-                    checked &&
-                    key === currentQuestion.answer
-                  "
-                  name="lucide:check-circle"
-                  class="mt-1 h-5 w-5 shrink-0 text-emerald-600"
+                  v-if="checked && key === currentQuestion.answer"
+                  name="lucide:check-circle-2"
+                  class="mt-1 h-5 w-5 shrink-0 text-[#0A6CFF]"
                 />
 
-
                 <!-- WRONG -->
-
                 <Icon
                   v-else-if="
                     checked &&
@@ -598,98 +498,55 @@ function solutionMath(question) {
                     key !== currentQuestion.answer
                   "
                   name="lucide:x-circle"
-                  class="mt-1 h-5 w-5 shrink-0 text-red-600"
+                  class="mt-1 h-5 w-5 shrink-0 text-[#0B2F6B]"
                 />
-
               </button>
-
             </div>
 
-
-            <!-- ================================================= -->
             <!-- SOLUTION -->
-            <!-- ================================================= -->
-
             <div
               v-if="checked"
-              class="mt-6 rounded-lg border p-4"
-              :class="
-                isCorrect
-                  ? 'border-emerald-200 bg-emerald-50'
-                  : 'border-red-200 bg-red-50'
-              "
+              class="mt-5 rounded-2xl p-3 sm:p-4"
+              :class="isCorrect ? 'bg-blue-50' : 'bg-slate-100'"
             >
-
               <div class="flex items-start gap-3">
-
                 <!-- ICON -->
-
                 <div
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  :class="
-                    isCorrect
-                      ? 'bg-emerald-100'
-                      : 'bg-red-100'
-                  "
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white"
+                  :class="isCorrect ? 'bg-[#0A6CFF]' : 'bg-[#0B2F6B]'"
                 >
-
                   <Icon
                     v-if="isCorrect"
                     name="lucide:check"
-                    class="h-5 w-5 text-emerald-600"
+                    class="h-5 w-5"
                   />
 
                   <Icon
                     v-else
                     name="lucide:x"
-                    class="h-5 w-5 text-red-600"
+                    class="h-5 w-5"
                   />
-
                 </div>
 
-
                 <!-- SOLUTION CONTENT -->
-
                 <div class="min-w-0 flex-1">
-
-                  <p
-                    class="font-bold"
-                    :class="
-                      isCorrect
-                        ? 'text-emerald-800'
-                        : 'text-red-800'
-                    "
-                  >
+                  <p class="font-bold text-[#0B2F6B]">
                     {{ isCorrect ? 'Correct!' : 'Incorrect' }}
                   </p>
 
-
                   <!-- CORRECT ANSWER -->
+                  <div class="mt-1 break-words text-sm text-slate-700">
+                    <span>Correct Answer:</span>
 
-                  <div class="mt-1 text-sm text-slate-700">
-
-                    <span>
-                      Correct Answer:
-                    </span>
-
-                    <strong class="ml-1 text-slate-900">
+                    <strong class="ml-1 text-[#0B2F6B]">
                       {{ currentQuestion.answer }}
                     </strong>
 
-
                     <!-- Correct answer text -->
-
                     <template
-                      v-if="
-                        currentQuestion.options?.[
-                          currentQuestion.answer
-                        ]
-                      "
+                      v-if="currentQuestion.options?.[currentQuestion.answer]"
                     >
-
-                      <span class="ml-1">
-                        —
-                      </span>
+                      <span class="ml-1">—</span>
 
                       <span
                         v-if="
@@ -699,51 +556,33 @@ function solutionMath(question) {
                         "
                         class="ml-1"
                       >
-                        {{
-                          currentQuestion.options[
-                            currentQuestion.answer
-                          ]
-                        }}
+                        {{ currentQuestion.options[currentQuestion.answer] }}
                       </span>
-
                     </template>
-
                   </div>
 
-
                   <!-- Correct answer matrix -->
-
                   <div
                     v-if="
                       optionMath(
-                        currentQuestion.options?.[
-                          currentQuestion.answer
-                        ]
+                        currentQuestion.options?.[currentQuestion.answer]
                       )
                     "
-                    class="mt-4 overflow-x-auto rounded-md bg-white px-4 py-5"
+                    class="mt-3 overflow-x-auto rounded-xl bg-white px-3 py-4"
                   >
-
                     <div
-                      class="flex min-w-max justify-center text-slate-900"
+                      class="flex min-w-max justify-center text-[#0B2F6B]"
                       v-html="
                         renderMathObject(
                           optionMath(
-                            currentQuestion.options?.[
-                              currentQuestion.answer
-                            ]
+                            currentQuestion.options?.[currentQuestion.answer]
                           )
                         )
                       "
                     ></div>
-
                   </div>
 
-
-                  <!-- ================================================= -->
                   <!-- EXPLANATION -->
-                  <!-- ================================================= -->
-
                   <div
                     v-if="
                       solutionText(currentQuestion) ||
@@ -751,158 +590,102 @@ function solutionMath(question) {
                     "
                     class="mt-4 border-t border-black/10 pt-4"
                   >
-
-                    <p class="mb-2 font-bold text-slate-800">
-                      Solution
-                    </p>
-
+                    <p class="mb-2 font-bold text-[#0B2F6B]">Solution</p>
 
                     <!-- Explanation text -->
-
                     <div
                       v-if="solutionText(currentQuestion)"
-                      class="text-sm leading-6 text-slate-700"
+                      class="rich break-words text-sm leading-6 text-slate-700"
                       v-html="solutionText(currentQuestion)"
                     ></div>
 
-
                     <!-- Explanation formula -->
-
                     <div
                       v-if="solutionMath(currentQuestion)"
-                      class="mt-4 overflow-x-auto rounded-md bg-white px-4 py-5"
+                      class="mt-3 overflow-x-auto rounded-xl bg-white px-3 py-4"
                     >
-
                       <div
-                        class="flex min-w-max justify-center text-slate-900"
-                        v-html="
-                          renderMathObject(
-                            solutionMath(currentQuestion)
-                          )
-                        "
+                        class="flex min-w-max justify-center text-[#0B2F6B]"
+                        v-html="renderMathObject(solutionMath(currentQuestion))"
                       ></div>
-
                     </div>
-
                   </div>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
-
-          <!-- ================================================= -->
           <!-- FOOTER -->
-          <!-- ================================================= -->
-
           <div
-            class="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4"
+            class="flex shrink-0 items-center justify-between gap-2 border-t border-blue-50 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:gap-3 sm:px-5 sm:pb-4"
           >
-
             <!-- PREVIOUS -->
-
             <button
               type="button"
-              @click="previousQuestion"
               :disabled="currentIndex === 0"
-              class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              class="flex h-11 items-center gap-1.5 rounded-2xl bg-blue-50 px-3 text-sm font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4"
+              @click="previousQuestion"
             >
-
-              <Icon
-                name="lucide:chevron-left"
-                class="h-4 w-4"
-              />
+              <Icon name="lucide:chevron-left" class="h-4 w-4" />
 
               Previous
-
             </button>
 
-
-            <div class="flex gap-2">
-
+            <div class="flex flex-1 justify-end">
               <!-- CHECK -->
-
               <button
                 v-if="!checked"
                 type="button"
-                @click="checkAnswer"
                 :disabled="!selectedAnswer"
-                class="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                class="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0A6CFF] px-5 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:flex-none"
+                @click="checkAnswer"
               >
-
-                <Icon
-                  name="lucide:check-circle"
-                  class="h-4 w-4"
-                />
+                <Icon name="lucide:check-circle-2" class="h-4 w-4" />
 
                 Check Answer
-
               </button>
-
 
               <!-- NEXT -->
-
               <button
-                v-else-if="
-                  currentIndex < questions.length - 1
-                "
+                v-else-if="currentIndex < questions.length - 1"
                 type="button"
+                class="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0A6CFF] px-5 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 sm:flex-none"
                 @click="nextQuestion"
-                class="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
               >
-
                 Next Question
 
-                <Icon
-                  name="lucide:chevron-right"
-                  class="h-4 w-4"
-                />
-
+                <Icon name="lucide:chevron-right" class="h-4 w-4" />
               </button>
 
-
               <!-- FINISH -->
-
               <button
                 v-else
                 type="button"
+                class="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#0B2F6B] px-5 text-sm font-bold text-white transition hover:brightness-125 active:scale-95 sm:flex-none"
                 @click="restartQuiz"
-                class="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-bold text-white transition hover:opacity-90"
               >
-
-                <Icon
-                  name="lucide:rotate-ccw"
-                  class="h-4 w-4"
-                />
+                <Icon name="lucide:rotate-ccw" class="h-4 w-4" />
 
                 Try Again
-
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
-
     </Transition>
-
   </Teleport>
-
 </template>
 
 
 <style scoped>
+button {
+  -webkit-tap-highlight-color: transparent;
+}
 
 /*
 |--------------------------------------------------------------------------
-| MODAL
+| MODAL ANIMATION
+| phones: sheet slides up   |   desktop: dialog fades and scales
 |--------------------------------------------------------------------------
 */
 
@@ -911,11 +694,9 @@ function solutionMath(question) {
   transition: opacity 0.2s ease;
 }
 
-.test-modal-enter-active > div:last-child,
-.test-modal-leave-active > div:last-child {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
+.test-modal-enter-active .test-panel,
+.test-modal-leave-active .test-panel {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .test-modal-enter-from,
@@ -923,12 +704,74 @@ function solutionMath(question) {
   opacity: 0;
 }
 
-.test-modal-enter-from > div:last-child,
-.test-modal-leave-to > div:last-child {
-  transform: scale(0.96);
-  opacity: 0;
+.test-modal-enter-from .test-panel,
+.test-modal-leave-to .test-panel {
+  transform: translateY(100%);
 }
 
+@media (min-width: 640px) {
+  .test-modal-enter-from .test-panel,
+  .test-modal-leave-to .test-panel {
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-modal-enter-active,
+  .test-modal-leave-active,
+  .test-modal-enter-active .test-panel,
+  .test-modal-leave-active .test-panel {
+    transition: none;
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| TEXT FROM THE DATABASE (v-html): never wider than the screen
+|--------------------------------------------------------------------------
+*/
+
+.rich :deep(*) {
+  max-width: 100%;
+}
+
+.rich :deep(p) {
+  margin: 0 0 0.5rem;
+}
+
+.rich :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.rich :deep(img) {
+  display: block;
+  height: auto;
+  margin: 0.5rem auto;
+  border-radius: 0.75rem;
+}
+
+.rich :deep(table) {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.rich :deep(th),
+.rich :deep(td) {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #dbeafe;
+}
+
+.rich :deep(ul) {
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.rich :deep(ol) {
+  padding-left: 1.25rem;
+  list-style: decimal;
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -947,26 +790,13 @@ function solutionMath(question) {
   font-size: 1.1em;
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| LARGE MATRICES
-|--------------------------------------------------------------------------
-*/
-
+/* LARGE MATRICES */
 :deep(.katex-display .katex) {
   max-width: 100%;
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| MOBILE
-|--------------------------------------------------------------------------
-*/
-
+/* MOBILE */
 @media (max-width: 640px) {
-
   :deep(.katex) {
     font-size: 1em;
   }
@@ -975,7 +805,5 @@ function solutionMath(question) {
     padding-left: 0.25rem;
     padding-right: 0.25rem;
   }
-
 }
-
 </style>

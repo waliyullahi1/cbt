@@ -4,7 +4,7 @@
   >
     <!-- HEADER -->
     <header
-      class="z-50 flex h-14 shrink-0 items-center gap-2 bg-navy px-3 text-white shadow-md sm:px-5 lg:px-6"
+      class="z-50 flex h-14 shrink-0 items-center gap-2 bg-primary px-3 text-white shadow-md sm:px-5 lg:px-6"
     >
       <!-- MOBILE MENU -->
       <button
@@ -105,7 +105,7 @@
       >
         <!-- MOBILE SIDEBAR HEADER -->
         <div
-          class="flex h-14 items-center justify-between border-b border-line bg-navy px-4 text-white lg:hidden"
+          class="flex h-14 items-center justify-between border-b border-line bg-primary px-4 text-white lg:hidden"
         >
           <div class="flex min-w-0 items-center gap-2">
             <Icon name="lucide:book-open" class="h-5 w-5 text-gold" />
@@ -248,7 +248,7 @@
                       class="group flex min-h-9 w-full min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs transition active:scale-[0.99] sm:min-h-10 sm:gap-2 sm:px-2.5 sm:py-2 sm:text-sm"
                       :class="
                         currentLesson?.slug === lesson.slug
-                          ? 'bg-navy font-medium text-white shadow-sm'
+                          ? 'bg-primary font-medium text-white shadow-sm'
                           : 'text-ink-soft hover:bg-bg hover:text-ink'
                       "
                       @click="openLesson(lesson.slug)"
@@ -533,7 +533,7 @@
 
           <button
             type="button"
-            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-navy/90 sm:text-sm"
+            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-primary/90 sm:text-sm"
             @click="sidebarOpen = true"
           >
             <Icon name="lucide:book-open" class="h-4 w-4" />

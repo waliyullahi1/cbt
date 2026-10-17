@@ -26,7 +26,7 @@
     <div
       class="flex h-full min-h-0 w-full max-w-full
          items-center justify-center overflow-hidden
-         bg-amber-950 p-0 sm:bg-black/10 sm:p-0"
+          p-0 sm:bg-black/10 sm:p-0"
     >
       <!-- MAIN BOOK CONTAINER -->
       <main

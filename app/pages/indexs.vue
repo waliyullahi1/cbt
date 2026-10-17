@@ -2,7 +2,7 @@
 <div class=" overflow-scroll h-full">
   <div class="flex h-full min-h-0 flex-col  overflow-scroll en bg-bg text-ink font-['Inter',system-ui,sans-serif]">
  
-    <header class="flex h-14 shrink-0 items-center justify-between bg-navy px-4 text-white shadow-md sm:px-6">
+    <header class="flex h-14 shrink-0 items-center justify-between bg-primary px-4 text-white shadow-md sm:px-6">
       <div class="flex items-center gap-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
           <Icon name="lucide:graduation-cap" class="h-5 w-5" />

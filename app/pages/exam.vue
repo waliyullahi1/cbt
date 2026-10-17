@@ -767,7 +767,7 @@ const getQuestionClass = (question, index) => {
         class="flex h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:h-[90dvh] sm:rounded-3xl"
       >
         <div
-          class="flex h-14 shrink-0 items-center justify-between bg-[#0B2F6B] px-4 text-white sm:px-6"
+          class="flex h-14 shrink-0 items-center justify-between bg-[#0B2F6B] px-2 text-white sm:px-6"
         >
           <h2 class="text-base font-bold">Examination Report</h2>
 
@@ -818,7 +818,7 @@ const getQuestionClass = (question, index) => {
             : appState.selectedSubjects || [])"
           :key="subject.id"
           type="button"
-          class="relative h-11 shrink-0 whitespace-nowrap px-4 text-xs font-bold transition active:bg-blue-50 sm:px-6"
+          class="relative h-11 shrink-0 whitespace-nowrap px-2 text-xs font-bold transition active:bg-blue-50 sm:px-6"
           :class="
             activeSubject === subject.id
               ? 'text-[#0A6CFF]'
@@ -848,18 +848,18 @@ const getQuestionClass = (question, index) => {
     <!-- ========================================= -->
     <main class="flex min-h-0 flex-1 overflow-hidden">
       <!-- DESKTOP QUESTION NAVIGATOR -->
-      <aside class="hidden shrink-0 p-3 pr-0 sm:flex sm:w-56 md:w-64 lg:w-72">
+      <aside class="hidden shrink-0 px-2 py-3 pr-0 sm:flex sm:w-56 md:w-64 lg:w-72 sm:pl-3">
         <div
           class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
         >
-          <div class="shrink-0 border-b border-blue-50 px-4 py-3">
+          <div class="shrink-0 border-b border-blue-50 px-2 py-3 sm:px-4">
             <h3 class="text-xs font-bold text-slate-500">
               Attempt: {{ attemptedCount }}/{{ totalCount }}
             </h3>
           </div>
 
           <div
-            class="grid min-h-0 flex-1 grid-cols-5 content-start gap-2 overflow-y-auto overscroll-contain p-3"
+            class="grid min-h-0 flex-1 grid-cols-5 content-start gap-2 overflow-y-auto overscroll-contain px-2 py-3 sm:pl-3 sm:pr-3"
           >
             <button
               v-for="(question, index) in currentSubject?.questions || []"
@@ -886,14 +886,14 @@ const getQuestionClass = (question, index) => {
       </aside>
 
       <!-- QUESTION CARD -->
-      <section class="flex min-w-0 flex-1 p-3 sm:p-4">
+      <section class="flex min-w-0 flex-1 px-2 py-3 sm:p-4">
         <div
           class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
         >
           <!-- card header -->
-          <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-4 sm:px-6">
+          <div class="flex shrink-0 items-center justify-between gap-2 px-2 pt-4 sm:px-6">
             <span
-              class="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#0A6CFF]"
+              class="rounded-full bg-blue-50 px-2 py-1 text-xs font-bold text-[#0A6CFF] sm:px-3"
             >
               Question:
               {{ currentSubject?.currentQuestion || 0 }}/{{
@@ -904,7 +904,7 @@ const getQuestionClass = (question, index) => {
             <button
               v-if="!Submitted"
               type="button"
-              class="block h-8 rounded-xl bg-[#0B2F6B] px-3 text-xs font-bold text-white transition active:scale-95 sm:hidden"
+              class="block h-8 rounded-xl bg-[#0B2F6B] px-2 text-xs font-bold text-white transition active:scale-95 sm:hidden sm:px-3"
               @click="showSubmitModal = true"
             >
               Submit
@@ -913,7 +913,7 @@ const getQuestionClass = (question, index) => {
             <button
               v-if="Submitted"
               type="button"
-              class="block h-8 rounded-xl bg-[#0B2F6B] px-3 text-xs font-bold text-white transition active:scale-95 sm:hidden"
+              class="block h-8 rounded-xl bg-[#0B2F6B] px-2 text-xs font-bold text-white transition active:scale-95 sm:hidden sm:px-3"
               @click="showExamReport = true"
             >
               Result
@@ -922,7 +922,7 @@ const getQuestionClass = (question, index) => {
 
           <!-- scrolling question + options -->
           <div
-            class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-3 sm:px-6 sm:pb-4"
+            class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-24 pt-3 sm:px-6 sm:pb-4"
           >
             <div class="mx-auto w-full max-w-3xl">
               <img
@@ -954,7 +954,7 @@ const getQuestionClass = (question, index) => {
                     currentQuestion?.options || {}
                   )"
                   :key="key"
-                  class="flex cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] p-3 transition active:scale-[0.99]"
+                  class="flex cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] px-2 py-3 transition active:scale-[0.99] sm:pl-3 sm:pr-3"
                   :class="{
                     'border-blue-100 bg-white hover:bg-blue-50/60':
                       optionState(key) === 'idle',
@@ -1020,24 +1020,25 @@ const getQuestionClass = (question, index) => {
               <!-- EXPLANATION -->
               <div
                 v-if="Submitted"
-                class="mt-5 rounded-2xl bg-blue-50 p-3 text-sm"
+                class="mt-5 rounded-2xl bg-blue-50 px-2 py-3 text-sm sm:pl-3 sm:pr-3"
               >
                 <QuestionExplanation
                   v-if="currentQuestion"
                   :question="currentQuestion"
                 />
+                {{currentQuestion}}
               </div>
             </div>
           </div>
 
           <!-- BOTTOM ACTION BAR -->
           <div
-            class="flex shrink-0 items-center justify-between gap-2 border-t border-blue-50 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:px-6 sm:pb-3"
+            class="flex shrink-0 items-center justify-between gap-2 border-t border-blue-50 bg-white px-2 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:px-6 sm:pb-3"
           >
             <div class="flex gap-2">
               <button
                 type="button"
-                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-blue-50 px-3 text-sm font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4"
+                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-blue-50 px-2 text-sm font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4"
                 :disabled="currentSubject?.currentQuestion <= 1"
                 @click="previous"
               >
@@ -1047,7 +1048,7 @@ const getQuestionClass = (question, index) => {
 
               <button
                 type="button"
-                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-[#0A6CFF] px-3 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-4"
+                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-[#0A6CFF] px-2 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-4"
                 :disabled="
                   currentSubject?.currentQuestion >=
                   currentSubject?.questions?.length
@@ -1063,7 +1064,7 @@ const getQuestionClass = (question, index) => {
               <button
                 v-if="Submitted"
                 type="button"
-                class="h-11 rounded-2xl bg-[#0B2F6B] px-4 text-sm font-bold text-white transition hover:brightness-125 active:scale-95"
+                class="h-11 rounded-2xl bg-[#0B2F6B] px-2 text-sm font-bold text-white transition hover:brightness-125 active:scale-95 sm:px-4"
                 @click="showExamReport = true"
               >
                 Result
@@ -1072,7 +1073,7 @@ const getQuestionClass = (question, index) => {
               <button
                 v-if="!Submitted"
                 type="button"
-                class="h-11 rounded-2xl bg-[#0B2F6B] px-4 text-sm font-bold text-white transition hover:brightness-125 active:scale-95"
+                class="h-11 rounded-2xl bg-[#0B2F6B] px-2 text-sm font-bold text-white transition hover:brightness-125 active:scale-95 sm:px-4"
                 @click="showSubmitModal = true"
               >
                 Submit
@@ -1087,7 +1088,7 @@ const getQuestionClass = (question, index) => {
     <button
       v-if="!showMobileQuestionList"
       type="button"
-      class="fixed bottom-[calc(env(safe-area-inset-bottom)+22px)] right-4 z-[110] flex h-12 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-4 text-white shadow-[0_8px_20px_rgba(10,108,255,0.45)] transition active:scale-95 sm:hidden"
+      class="fixed bottom-[calc(env(safe-area-inset-bottom)+22px)] right-4 z-[110] flex h-12 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-2 text-white shadow-[0_8px_20px_rgba(10,108,255,0.45)] transition active:scale-95 sm:hidden sm:px-4"
       @click="openMobileQuestionList"
     >
       <Icon name="lucide:grid-3x3" class="h-4 w-4" />
@@ -1120,7 +1121,7 @@ const getQuestionClass = (question, index) => {
           <div class="h-1.5 w-12 rounded-full bg-slate-200"></div>
         </div>
 
-        <div class="flex shrink-0 items-center justify-between px-5 py-3">
+        <div class="flex shrink-0 items-center justify-between px-2 py-3 sm:px-5">
           <div>
             <h2 class="text-sm font-bold text-[#0B2F6B]">
               Question Navigator
@@ -1141,7 +1142,7 @@ const getQuestionClass = (question, index) => {
         </div>
 
         <!-- attempted card -->
-        <div class="mx-4 shrink-0 rounded-2xl bg-blue-50 px-4 py-3">
+        <div class="mx-4 shrink-0 rounded-2xl bg-blue-50 px-2 py-3 sm:px-4">
           <div class="flex items-center justify-between">
             <span class="text-xs text-slate-500">Attempted</span>
 
@@ -1159,7 +1160,7 @@ const getQuestionClass = (question, index) => {
         </div>
 
         <!-- grid -->
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-4 sm:px-5">
           <div class="grid grid-cols-5 gap-2.5">
             <button
               v-for="(question, index) in currentSubject?.questions || []"
@@ -1186,7 +1187,7 @@ const getQuestionClass = (question, index) => {
 
         <!-- footer -->
         <div
-          class="shrink-0 border-t border-blue-50 bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
+          class="shrink-0 border-t border-blue-50 bg-white px-2 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3 sm:px-5"
         >
           <button
             type="button"
@@ -1234,7 +1235,7 @@ button {
 /* passage / instruction above the question */
 .question-section {
   margin-bottom: 12px;
-  padding: 12px;
+  padding: 12px 8px;
   border-radius: 16px;
   background: #f3f8ff;
   font-weight: 500;
@@ -1245,6 +1246,10 @@ button {
   .question-content {
     font-size: 16px;
     line-height: 1.7;
+  }
+
+  .question-section {
+    padding: 12px;
   }
 }
 
@@ -1345,7 +1350,7 @@ button {
 .question-section :deep(td),
 .question-content :deep(th),
 .question-content :deep(td) {
-  padding: 7px 9px;
+  padding: 7px 8px;
   border: 1px solid #dbeafe;
   text-align: left;
   vertical-align: top;
@@ -1380,7 +1385,7 @@ button {
 .question-content :deep(pre) {
   max-width: 100%;
   margin: 10px 0;
-  padding: 10px;
+  padding: 10px 8px;
   overflow-x: auto;
   border-radius: 12px;
   background: #eff6ff;

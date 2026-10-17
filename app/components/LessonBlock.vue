@@ -57,7 +57,7 @@
       class="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2.5 sm:px-4"
     >
       <div
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-navy/10 sm:h-7 sm:w-7"
+        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 sm:h-7 sm:w-7"
       >
         <Icon
           name="lucide:book-open"
@@ -97,7 +97,7 @@
 
   <div
     v-else-if="block.type === 'note'"
-    class="mt-4 rounded-lg border border-navy-soft/20 bg-navy-soft/5 px-3 py-3 sm:mt-5 sm:px-4 sm:py-4"
+    class="mt-4 rounded-lg border border-navy-soft/20 bg-primary-soft/5 px-3 py-3 sm:mt-5 sm:px-4 sm:py-4"
   >
     <div class="flex items-start gap-2.5">
       <Icon
@@ -276,7 +276,7 @@
         class="flex items-start gap-2.5 sm:gap-3"
       >
         <div
-          class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
+          class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
         >
           {{ i + 1 }}
         </div>
@@ -326,7 +326,7 @@
         class="min-w-full border-collapse text-left text-[12px] sm:text-sm"
       >
         <thead>
-          <tr class="bg-navy text-white">
+          <tr class="bg-primary text-white">
             <th
               v-for="(head, i) in (block.headers || [])"
               :key="i"
@@ -419,7 +419,7 @@
       class="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2.5 sm:px-4 sm:py-3"
     >
       <div
-        class="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
+        class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white sm:h-7 sm:w-7 sm:text-xs"
       >
         ?
       </div>
@@ -909,7 +909,7 @@
     >
       <div class="flex min-w-0 items-start gap-2">
         <div
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-navy/10"
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10"
         >
           <Icon
             name="lucide:clipboard-check"
@@ -941,7 +941,7 @@
 
     <div class="h-1 bg-slate-100">
       <div
-        class="h-full bg-navy transition-all duration-300"
+        class="h-full bg-primary transition-all duration-300"
         :style="{ width: `${checklistProgress}%` }"
       ></div>
     </div>

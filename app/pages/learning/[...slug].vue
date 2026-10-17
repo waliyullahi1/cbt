@@ -531,7 +531,7 @@
 
             <button
               type="button"
-              class="mt-4 rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-navy/90"
+              class="mt-4 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
               @click="clearSearch"
             >
               Clear search
@@ -626,7 +626,7 @@
           <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
-              class="rounded-lg bg-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-navy/90"
+              class="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/90"
               @click="navigateTo(`/learning/${subjectSlug}`)"
             >
               Back to subject
@@ -733,7 +733,7 @@
             <button
               v-if="firstLesson"
               type="button"
-              class="mt-6 inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-semibold text-white transition hover:bg-navy/90"
+              class="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/90"
               @click="navigateTo(lessonUrl(firstLesson))"
             >
               Start Learning

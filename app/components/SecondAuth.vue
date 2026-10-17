@@ -82,7 +82,7 @@ const {
        
         <div class="auth-content mx-auto w-full max-w-[400px]">
           <!-- Mobile logo -->
-          <div class="auth-mobile-logo mb-8 flex justify-center lg:hidden">
+          <div class="auth-mobile-logo sm:mb-8 mb-3 flex justify-center lg:hidden">
             <NavigationLogo />
           </div>
 
@@ -115,7 +115,7 @@ const {
               <!-- Heading -->
               <div class="mb-7 text-center">
                 <h1
-                  class="text-2xl font-bold tracking-tight text-slate-950 sm:text-[26px]"
+                  class="sm:text-2xl text-xl font-bold tracking-tight text-slate-950 sm:text-[26px]"
                 >
                   Welcome back to ExamTips
                 </h1>
@@ -233,7 +233,7 @@ const {
               <!-- Heading -->
               <div class="mb-7 text-center">
                 <h1
-                  class="text-2xl font-bold tracking-tight text-slate-950 sm:text-[26px]"
+                  class="sm:text-2xl text-xl font-bold tracking-tight text-slate-950 sm:text-[26px]"
                 >
                   Create your account
                 </h1>

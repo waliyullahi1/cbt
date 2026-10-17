@@ -347,7 +347,7 @@
 
           <button
             type="button"
-            class="mt-4 w-full border border-gray-300 bg-gray-50 rounded-xl bg-navy py-2.5 text-sm font-semibold texe transition hover:opacity-90"
+            class="mt-4 w-full border border-gray-300 bg-gray-50 rounded-xl bg-primary py-2.5 text-sm font-semibold texe transition hover:opacity-90"
             @click="confirmAddUser"
           >
             Add & Switch
