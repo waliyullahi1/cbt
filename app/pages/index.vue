@@ -4,7 +4,7 @@
          overflow-hidden overscroll-none bg-[#F3F7FE] sm:flex "
      style="background-image: url('./Image/background.png')"
   >
- <div class="relative flex h-full min-h-0 w-full flex-col bg-white/80 sm:flex-row">
+ <div class="relative flex h-full min-h-0 w-full flex-col bg-white/80 sm:bg-transparent ">
  
     <!-- Desktop / tablet background image (hidden on phones) -->
     <div
@@ -19,24 +19,25 @@
         @bookmarks="openBook({ component: 'BOOKMARKS' })"
         @leaderboard="openBook({ component: 'LEADERBOARD' })"
       />
+      <div class="   h-28  bg-amber-600 w-full"></div>
     </div>
 
     <!-- OVERLAY -->
     <div
       class="flex h-full min-h-0 w-full max-w-full
          items-center justify-center overflow-hidden
-         bg-transparent p-0 sm:bg-black/10 sm:p-4"
+         bg-amber-950 p-0 sm:bg-black/10 sm:p-0"
     >
       <!-- MAIN BOOK CONTAINER -->
       <main
-        class="relative h-dvh w-full max-w-full overflow-hidden rounded-none shadow-none [perspective:1800px] sm:mt-6 sm:h-[85vh] sm:max-w-[70%] sm:rounded-xl sm:shadow-[0_20px_45px_rgba(0,0,0,0.18)] md:h-[80vh] lg:h-[75vh]"
+        class="relative h-dvh w-full max-w-full overflow-hidden rounded-none shadow-none [perspective:1800px]  sm:h-[85vh] sm:max-w-[70%] sm:rounded-xl sm:shadow-[0_20px_45px_rgba(0,0,0,0.18)] md:h-[80vh] lg:h-[75vh]"
       >
         <!-- ====================================================== -->
         <!-- HOME PAGE -->
         <!-- ====================================================== -->
         <section
           :class="[
-            'absolute inset-0 z-20 flex w-full max-w-full min-w-0 flex-col overflow-x-hidden overflow-hidden bg-transparent p-0 transition-all duration-900 ease-in-out [transform-style:preserve-3d] [transform-origin:left_center] sm:p-2',
+            'absolute inset-0 z-20 flex w-full max-w-full min-w-0 flex-col overflow-x-hidden overflow-hidden bg-transparent p-0 transition-all duration-900 ease-in-out [transform-style:preserve-3d] [transform-origin:left_center] ',
             appState.showSecond
               ? 'pointer-events-none rotate-y-[-110deg] opacity-0'
               : 'rotate-y-0 opacity-100',
@@ -201,7 +202,7 @@
           <div class="hidden min-h-0 w-full flex-1 flex-col sm:flex">
             <!-- ACTIVATION BAR -->
             <section
-              class="mt-1 flex w-full max-w-full min-w-0 shrink-0 items-center justify-between gap-2 rounded-xl bg-white/35 p-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] backdrop-blur-[8px] sm:mt-2 sm:px-5 sm:py-3"
+              class=" flex w-full max-w-full min-w-0 shrink-0 items-center justify-between gap-2 rounded-xl bg-white/35 p-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] backdrop-blur-[8px]  sm:px-5 sm:py-3"
             >
               <div class="flex min-w-0 items-center gap-2">
                 <div

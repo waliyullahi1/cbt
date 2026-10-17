@@ -7,7 +7,7 @@
     <!-- ========================================================= -->
 
     <header
-      class="z-40 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-navy px-3 text-white sm:gap-3 sm:px-6"
+      class="z-40 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-primary px-3 text-white sm:gap-3 sm:px-6"
     >
       <!-- MOBILE MENU -->
       <button

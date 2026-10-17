@@ -250,12 +250,12 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
 <template>
   <div
-    class="min-h-screen bg-[#f7f8fa] font-['Poppins',sans-serif] text-[#24304a]"
+    class="min-h-screen bg-[#f7f8fa] font-['Roboto',-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif] text-[#24304a] antialiased"
   >
     <!-- HEADER -->
     <header class="bg-[#24304a] text-white">
       <div
-        class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8"
+        class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-2 py-4 sm:px-6 lg:px-8"
       >
         <!-- BRAND -->
         <div class="flex min-w-0 items-center gap-3">
@@ -266,11 +266,11 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
           </div>
 
           <div class="min-w-0">
-            <h1 class="truncate text-base font-semibold sm:text-lg">
+            <h1 class="truncate text-base font-medium leading-6 tracking-normal">
               Leaderboard
             </h1>
 
-            <p class="text-[11px] text-white/65 sm:text-xs">
+            <p class="text-[11px] leading-4 tracking-wide text-white/65">
               Practice. Improve. Achieve.
             </p>
           </div>
@@ -290,7 +290,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
     <!-- MAIN CONTENT -->
     <main
-      class="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
+      class="mx-auto max-w-7xl space-y-5 px-2 py-5 sm:px-6 lg:px-8 lg:py-7"
     >
       <!-- TITLE -->
       <section
@@ -298,16 +298,16 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
       >
         <div>
           <p
-            class="mb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-[#b9873b]"
+            class="mb-1 text-[10px] font-medium uppercase leading-4 tracking-widest text-[#b9873b]"
           >
             Student Rankings
           </p>
 
-          <h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h2 class="text-2xl font-medium leading-8 tracking-normal">
             Top Performers
           </h2>
 
-          <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+          <p class="mt-1 text-xs leading-4 text-slate-500 sm:text-sm sm:leading-5">
             View student performance.
           </p>
         </div>
@@ -315,14 +315,14 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
         <div class="flex items-center gap-2">
           <span
             v-if="pending"
-            class="flex items-center gap-1.5 rounded-full bg-[#b9873b]/10 px-3 py-1.5 text-xs font-medium text-[#b9873b]"
+            class="flex items-center gap-1.5 rounded-full bg-[#b9873b]/10 px-3 py-1.5 text-xs font-medium leading-4 tracking-wide text-[#b9873b]"
           >
             <Icon name="lucide:loader-circle" size="13" class="animate-spin" />
             Updating...
           </span>
 
           <span
-            class="w-fit rounded-full bg-[#24304a]/10 px-3 py-1.5 text-xs font-medium text-[#24304a]"
+            class="w-fit rounded-full bg-[#24304a]/10 px-3 py-1.5 text-xs font-medium leading-4 tracking-wide tabular-nums text-[#24304a]"
           >
             {{ filteredStudents.length }} students
           </span>
@@ -337,12 +337,12 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
         <article
           v-for="student in topThree"
           :key="student.id"
-          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          class="rounded-2xl border border-slate-200 bg-white sm:p-4  p-2 shadow-sm"
         >
           <div class="flex items-center gap-3">
             <!-- RANK -->
             <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-medium"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-medium leading-6 tabular-nums"
               :class="getRankClass(getRank(student))"
             >
               {{ getRank(student) }}
@@ -350,15 +350,15 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
             <!-- STUDENT -->
             <div class="min-w-0 flex-1">
-              <p class="text-[10px] uppercase tracking-wide text-[#b9873b]">
+              <p class="text-[10px] font-medium uppercase leading-4 tracking-wider text-[#b9873b]">
                 Rank {{ getRank(student) }}
               </p>
 
-              <h3 class="truncate text-sm font-medium text-[#24304a]">
+              <h3 class="truncate text-sm font-medium leading-5 text-[#24304a]">
                 {{ student.name }}
               </h3>
 
-              <p class="flex items-center gap-1 text-[11px] text-slate-400">
+              <p class="flex items-center gap-1 text-[11px] leading-4 tracking-wide text-slate-400">
                 <Icon name="lucide:map-pin" size="12" />
                 {{ student.location }}
               </p>
@@ -371,20 +371,20 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
           <div class="flex items-end justify-between">
             <div>
-              <p class="text-[11px] text-slate-400">Score</p>
+              <p class="text-[11px] leading-4 tracking-wide text-slate-400">Score</p>
 
-              <p class="text-xl font-medium text-[#24304a]">
+              <p class="text-xl font-medium leading-7 tabular-nums text-[#24304a]">
                 {{ student.score }}
-                <span class="text-xs font-normal text-slate-400">
+                <span class="text-xs font-normal leading-4 text-slate-400">
                   /{{ student.total }}
                 </span>
               </p>
             </div>
 
             <div class="text-right">
-              <p class="text-[11px] text-slate-400">Time</p>
+              <p class="text-[11px] leading-4 tracking-wide text-slate-400">Time</p>
 
-              <p class="text-xs font-medium text-[#24304a]">
+              <p class="text-xs font-medium leading-4 tabular-nums text-[#24304a]">
                 {{ student.time }}
               </p>
             </div>
@@ -401,9 +401,9 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
           class="flex items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-5"
         >
           <div>
-            <h3 class="text-base font-medium text-[#24304a]">Rankings</h3>
+            <h3 class="text-base font-medium leading-6 text-[#24304a]">Rankings</h3>
 
-            <p class="mt-0.5 text-[11px] text-slate-400">
+            <p class="mt-0.5 text-[11px] leading-4 tracking-wide text-slate-400">
               Student performance
             </p>
           </div>
@@ -422,17 +422,17 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
             class="mx-auto text-slate-400"
           />
 
-          <p class="mt-3 text-sm font-medium text-[#24304a]">
+          <p class="mt-3 text-sm font-medium leading-5 text-[#24304a]">
             No students found
           </p>
 
-          <p class="mt-1 text-xs text-slate-400">
+          <p class="mt-1 text-xs leading-4 text-slate-400">
             Try another search or filter.
           </p>
 
           <button
             type="button"
-            class="mt-4 rounded-lg bg-[#24304a] px-4 py-2 text-xs text-white"
+            class="mt-4 rounded-lg bg-[#24304a] px-4 py-2 text-xs font-medium leading-4 tracking-wide text-white"
             @click="resetFilters"
           >
             Clear filters
@@ -443,7 +443,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
         <div v-else>
           <!-- LAPTOP TABLE HEADER -->
           <div
-            class="hidden grid-cols-[45px_minmax(180px,1fr)_120px_110px_110px] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 text-[10px] font-medium uppercase tracking-wide text-slate-400 md:grid"
+            class="hidden grid-cols-[45px_minmax(180px,1fr)_120px_110px_110px] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 text-[10px] font-medium uppercase leading-4 tracking-wider text-slate-400 md:grid"
           >
             <span>#</span>
             <span>Student</span>
@@ -464,7 +464,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
             >
               <!-- RANK -->
               <div
-                class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium leading-4 tabular-nums"
                 :class="getRankClass(getRank(student))"
               >
                 {{ getRank(student) }}
@@ -473,30 +473,30 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
               <!-- STUDENT -->
               <div class="flex min-w-0 items-center gap-3">
                 <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#24304a] text-[10px] font-medium text-white"
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#24304a] text-[10px] font-medium leading-4 tracking-wide text-white"
                 >
                   {{ getInitials(student.name) }}
                 </div>
 
                 <div class="min-w-0">
-                  <p class="truncate text-xs font-medium text-[#24304a]">
+                  <p class="truncate text-xs font-medium leading-4 text-[#24304a]">
                     {{ student.name }}
                   </p>
 
-                  <p class="truncate text-[10px] text-slate-400">
+                  <p class="truncate text-[10px] leading-4 tracking-wide text-slate-400">
                     {{ student.examType }}
                   </p>
                 </div>
               </div>
 
               <!-- LOCATION -->
-              <p class="truncate text-xs text-slate-500">
+              <p class="truncate text-xs leading-4 text-slate-500">
                 {{ student.location }}
               </p>
 
               <!-- SCORE -->
               <div>
-                <p class="text-xs font-medium text-[#24304a]">
+                <p class="text-xs font-medium leading-4 tabular-nums text-[#24304a]">
                   {{ student.score }}
                   <span class="font-normal text-slate-400">
                     /{{ student.total }}
@@ -520,7 +520,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
               </div>
 
               <!-- TIME -->
-              <p class="text-xs text-slate-500">
+              <p class="text-xs leading-4 tabular-nums text-slate-500">
                 {{ student.time }}
               </p>
             </div>
@@ -529,7 +529,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
             <div class="flex items-center gap-3 md:hidden">
               <!-- RANK -->
               <div
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium leading-4 tabular-nums"
                 :class="getRankClass(getRank(student))"
               >
                 {{ getRank(student) }}
@@ -537,19 +537,19 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
               <!-- INITIALS -->
               <div
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#24304a] text-[10px] font-medium text-white"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#24304a] text-[10px] font-medium leading-4 tracking-wide text-white"
               >
                 {{ getInitials(student.name) }}
               </div>
 
               <!-- DETAILS -->
               <div class="min-w-0 flex-1">
-                <p class="truncate text-xs font-medium text-[#24304a]">
+                <p class="truncate text-xs font-medium leading-4 text-[#24304a]">
                   {{ student.name }}
                 </p>
 
                 <div
-                  class="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-400"
+                  class="mt-1 flex flex-wrap items-center gap-2 text-[10px] leading-4 tracking-wide text-slate-400"
                 >
                   <span class="flex items-center gap-1">
                     <Icon name="lucide:map-pin" size="11" />
@@ -558,7 +558,7 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
                   <span>•</span>
 
-                  <span class="flex items-center gap-1">
+                  <span class="flex items-center gap-1 tabular-nums">
                     <Icon name="lucide:clock-3" size="11" />
                     {{ student.time }}
                   </span>
@@ -567,11 +567,11 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
 
               <!-- SCORE -->
               <div class="text-right">
-                <p class="text-sm font-medium text-[#24304a]">
+                <p class="text-sm font-medium leading-5 tabular-nums text-[#24304a]">
                   {{ student.score }}
                 </p>
 
-                <p class="text-[10px] text-slate-400">
+                <p class="text-[10px] leading-4 tabular-nums text-slate-400">
                   /{{ student.total }}
                 </p>
               </div>
@@ -583,14 +583,14 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
         <div
           class="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3 sm:px-5"
         >
-          <p class="text-[11px] text-slate-400">
+          <p class="text-[11px] leading-4 tracking-wide tabular-nums text-slate-400">
             Page {{ currentPage }} of {{ totalPages }}
           </p>
 
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium text-[#24304a] disabled:cursor-not-allowed disabled:opacity-40"
+              class="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium leading-4 tracking-wide text-[#24304a] disabled:cursor-not-allowed disabled:opacity-40"
               :disabled="currentPage === 1"
               @click="previousPage"
             >
@@ -599,14 +599,14 @@ watch([searchQuery, selectedExamType, selectedCategory], () => {
             </button>
 
             <span
-              class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#24304a] px-2 text-[11px] text-white"
+              class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-[#24304a] px-2 text-[11px] font-medium leading-4 tabular-nums text-white"
             >
               {{ currentPage }}
             </span>
 
             <button
               type="button"
-              class="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium text-[#24304a] disabled:cursor-not-allowed disabled:opacity-40"
+              class="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium leading-4 tracking-wide text-[#24304a] disabled:cursor-not-allowed disabled:opacity-40"
               :disabled="currentPage === totalPages"
               @click="nextPage"
             >

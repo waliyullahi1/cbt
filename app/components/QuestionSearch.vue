@@ -14,35 +14,44 @@
     <!-- ========================================= -->
     <!-- APP BAR -->
     <!-- ========================================= -->
-    <header
-      class="relative z-10 shrink-0 bg-[#0B2F6B] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_16px_rgba(11,47,107,0.25)]"
+    
+
+        <header
+      class="relative z-10 shrink-0 sm:bg-[#0B2F6B]  bg-transparent  sm:text-white text-[#5B6E8F] sm:shadow-[0_4px_16px_rgba(11,47,107,0.25)]  shadow-[0_1px_2px_rgba(36 sm:backdrop-blur-[4px] sm:backdrop-saturate-[180%]"
     >
-      <div class="mx-auto flex min-h-16 w-full max-w-5xl items-center justify-between gap-3 px-2 py-2 md:px-8">
+      <div class="flex min-h-12 items-center justify-between gap-3 sm:px-4  px-2 py-2">
         <div class="flex min-w-0 items-center gap-3">
+         <button
+          type="button"
+          class="flex sm:hidden h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
+          aria-label="Open menu"
+          @click="menuOpen = true"
+        > 
+          <img src="/images/logos.svg"   class=" w"  >
+        </button>
           <span
-            class="flex sm:h-10 h-7 w-7 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)]"
+            class="sm:flex hidden  sm:h-10 sm:w-10 w-8 h-8 shrink-0 items-center justify-center rounded-xl bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)]"
           >
-            <Icon name="lucide:search-check" class="sm:h-5 h-4 w-4 sm:w-5" />
+            <Icon name="lucide:search-check" class="sm:h-5 h-3 w-3 sm:w-5" />
           </span>
 
           <div class="min-w-0">
-            <h1 class="truncate text-[13px] sm:text-[15px] font-bold leading-tight tracking-tight">
+            <h1 class="truncate  text-[15px] font-bold leading-tight tracking-tight">
               Question Bank
             </h1>
-            <p class="mt-0.5 truncate text-[11px] leading-tight text-white/65">
-              Search by topic, subject, or any words
+            <p class="mt-0.5 truncate  text-[11px]  leading-tight  sm:text-white/65">
+               Search by topic, subject, or any words
             </p>
           </div>
         </div>
 
         <button
           type="button"
-          class="flex sm:h-11 h-7 sm:w-11 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)] transition hover:brightness-110 active:scale-95"
+          class="flex sm:h-11 h-9 w-9 sm:w-11 shrink-0 items-center justify-center rounded-full sm:bg-[#0A6CFF] bg-white sm:shadow-[0_4px_10px_rgba(10,108,255,0.45)] shadow-[0_1px_2px_rgba(36,48,74,0.04)] transition active:scale-95"
           aria-label="Go home"
-          title="Go home"
           @click="goHome"
         >
-          <Icon name="lucide:house" class="sm:h-5 h-4 w-4 sm:w-5" />
+          <Icon name="lucide:house" class="h-5  w-5" />
         </button>
       </div>
     </header>
