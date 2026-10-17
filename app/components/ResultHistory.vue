@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 
 const appState = useAppState()
 
@@ -111,6 +111,7 @@ const formatSubject = (s: unknown) => {
   const text = subjectNameFrom(s) || "Unknown subject"
 
   return text
+    .toLowerCase()
     .replace(/-/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
@@ -299,6 +300,69 @@ const view = async (id: string | number) => {
 }
 
 // ==========================================
+// SELF-FITTING HEIGHT
+// Makes the page exactly as tall as the free space between its top
+// and the bottom tab bar, so <main> always has something to scroll
+// inside, whatever the parent layout does.
+// ==========================================
+
+const pageRoot = ref<HTMLElement | null>(null)
+let resizeObserver: ResizeObserver | null = null
+
+const fitHeight = () => {
+  const el = pageRoot.value
+  if (!el) return
+
+  const top = el.getBoundingClientRect().top
+  let bottom = window.innerHeight
+
+  // Is something (a bottom tab bar) pinned to the bottom edge of the screen?
+  let node: Element | null = document.elementFromPoint(
+    window.innerWidth / 2,
+    window.innerHeight - 2
+  )
+
+  while (node && node !== document.body && node !== document.documentElement) {
+    if (!el.contains(node)) {
+      const r = node.getBoundingClientRect()
+
+      if (
+        r.bottom >= window.innerHeight - 2 &&
+        r.height < window.innerHeight * 0.3 &&
+        r.top > top
+      ) {
+        bottom = Math.min(bottom, r.top)
+      }
+    }
+
+    node = node.parentElement
+  }
+
+  el.style.height = `${Math.max(240, Math.floor(bottom - top))}px`
+}
+
+onMounted(() => {
+  fitHeight()
+  void nextTick(fitHeight)
+  setTimeout(fitHeight, 150)
+  setTimeout(fitHeight, 600)
+
+  window.addEventListener("resize", fitHeight)
+  window.addEventListener("orientationchange", fitHeight)
+
+  if (typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(fitHeight)
+    resizeObserver.observe(document.body)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", fitHeight)
+  window.removeEventListener("orientationchange", fitHeight)
+  resizeObserver?.disconnect()
+})
+
+// ==========================================
 // ACTIONS
 // ==========================================
 
@@ -322,1024 +386,287 @@ const deleteHistory = async (id: string | number) => {
 </script>
 
 <template>
-  <div class="exam-history">
-    <!-- HEADER -->
-    <header class="eh-header">
-      <div class="eh-header__brand">
-        <span class="eh-header__mark">
-          <Icon name="lucide:scroll-text" />
-        </span>
+  <div
+    ref="pageRoot"
+    class="relative flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-[#F3F8FF] text-[#0B2F6B] font-['Inter',system-ui,sans-serif]"
+  >
+    <!-- DECORATIVE BACKGROUND (non-interactive) -->
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <Icon name="lucide:book-open" class="absolute right-[-10px] top-[260px] h-14 w-14 rotate-12 text-blue-200/60" />
+      <Icon name="lucide:flask-conical" class="absolute bottom-[110px] left-3 h-10 w-10 -rotate-12 text-blue-200/60" />
+      <Icon name="lucide:pencil" class="absolute bottom-[130px] right-4 h-12 w-12 text-blue-200/60" />
+      <Icon name="lucide:atom" class="absolute bottom-6 left-5 h-12 w-12 text-blue-200/60" />
+    </div>
+    <header
+      class="relative z-10 shrink-0 sm:bg-[#0B2F6B]  bg-transparent  sm:text-white text-[#5B6E8F] sm:shadow-[0_4px_16px_rgba(11,47,107,0.25)]  shadow-[0_1px_2px_rgba(36 sm:backdrop-blur-[4px] sm:backdrop-saturate-[180%]"
+    >
+      <div class="flex min-h-12 items-center justify-between gap-3 sm:px-4  px-2 py-2">
+        <div class="flex min-w-0 items-center gap-3">
+         <button
+          type="button"
+          class="flex sm:hidden h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
+          aria-label="Open menu"
+          @click="menuOpen = true"
+        >
+          <img src="/images/logos.svg"   class=" w"  >
+        </button>
+          <span
+            class="sm:flex hidden  sm:h-10 sm:w-10 w-8 h-8 shrink-0 items-center justify-center rounded-xl bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)]"
+          >
+            <Icon name="lucide:scroll-text" class="sm:h-5 h-3 w-3 sm:w-5" />
+          </span>
 
-        <div class="min-w-0">
-          <h1 class="eh-header__title">Exam Record</h1>
-
-          <p class="eh-header__sub">
-            <span class="hidden sm:inline">Every practice attempt, on file</span>
-            <span class="sm:hidden">Your practice history</span>
-          </p>
+          <div class="min-w-0">
+            <h1 class="truncate  text-[15px] font-bold leading-tight tracking-tight">
+              Exam Record
+            </h1>
+             <p class="sm:mt-0.5 mt-0 truncate text-[11px] leading-tight ">
+              <span class="hidden sm:inline">Every practice attempt, on file</span>
+              <span class="sm:hidden">Your practice history</span>
+            </p>
+          </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        class="eh-header__home"
-        @click="goHome"
-        aria-label="Go home"
-      >
-        <Icon name="lucide:house" />
-      </button>
+        <button
+          type="button"
+          class="flex sm:h-11 h-9 w-9 sm:w-11 shrink-0 items-center justify-center rounded-full sm:bg-[#0A6CFF] bg-white sm:shadow-[0_4px_10px_rgba(10,108,255,0.45)] shadow-[0_1px_2px_rgba(36,48,74,0.04)] transition active:scale-95"
+          aria-label="Go home"
+          @click="goHome"
+        >
+          <Icon name="lucide:house" class="h-5  w-5" />
+        </button>
+      </div>
     </header>
+    <!-- APP BAR -->
+    
 
-    <!-- MAIN -->
-    <main class="eh-main">
-      <!-- ERROR BANNER -->
-      <div v-if="loadError" class="eh-error">
-        <span>Could not load your history.</span>
+    <!-- MAIN (this is the part that scrolls) -->
+    <main
+      class="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4 md:px-8 md:pt-6"
+    >
+      <div class="mx-auto w-full max-w-5xl">
+        <!-- ERROR BANNER -->
+        <div
+          v-if="loadError"
+          class="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-[#0B2F6B]"
+        >
+          <span>Could not load your history.</span>
 
-        <button type="button" class="eh-error__retry" @click="loadHistories()">
-          Try again
-        </button>
-      </div>
-
-      <!-- PAGE INTRO -->
-      <div v-if="histories?.length" class="eh-intro">
-        <div>
-          <p class="eh-intro__eyebrow">PERFORMANCE ARCHIVE</p>
-          <h2 class="eh-intro__title">Your exam history</h2>
+          <button
+            type="button"
+            class="shrink-0 rounded-xl bg-[#0A6CFF] px-3 py-1.5 text-xs font-bold text-white transition active:scale-95"
+            @click="loadHistories()"
+          >
+            Try again
+          </button>
         </div>
 
-        <span class="eh-count">
-          {{ histories.length }}
-          {{ histories.length === 1 ? "Attempt" : "Attempts" }}
-        </span>
-      </div>
-
-      <!-- LOADING SKELETONS -->
-      <ul v-if="loading && !histories?.length" class="ticket-list">
-        <li v-for="n in 3" :key="n" class="ticket ticket--skeleton">
-          <div class="ticket__top">
-            <div class="ticket__meta">
-              <div class="sk sk--line sk--short"></div>
-              <div class="sk sk--title"></div>
-              <div class="sk sk--line"></div>
-            </div>
-            <div class="sk sk--seal"></div>
-          </div>
-
-          <div class="ticket__perforation" role="presentation"></div>
-
-          <div class="ticket__stats">
-            <div v-for="i in 6" :key="i" class="sk sk--stat"></div>
-          </div>
-
-          <div class="ticket__actions">
-            <div class="sk sk--btn"></div>
-            <div class="sk sk--btn"></div>
-          </div>
-        </li>
-      </ul>
-
-      <!-- EMPTY STATE -->
-      <div v-else-if="!histories?.length && !loadError" class="eh-empty">
-        <div class="eh-empty__mark">
-          <Icon name="lucide:scroll-text" />
-        </div>
-
-        <h2 class="eh-empty__title">No record yet</h2>
-
-        <p class="eh-empty__sub">
-          Finish a practice exam and it'll be filed here.
-        </p>
-
-        <button type="button" class="empty-action" @click="goHome">
-          <Icon name="lucide:arrow-left" />
-          Start practicing
-        </button>
-      </div>
-
-      <!-- HISTORY LIST -->
-      <ul v-else-if="histories?.length" class="ticket-list">
-        <li v-for="exam in sortedHistories" :key="exam.id" class="ticket">
-          <!-- TOP -->
-          <div class="ticket__top">
-            <div class="ticket__meta">
-              <span class="ticket__eyebrow">
-                {{ examTypeLabel(exam) }}
-                <span class="dot">·</span>
-                {{ formatDate(exam.createdAt) }}
-              </span>
-
-              <h2 class="ticket__title">
-                {{ titleFor(exam) }}
+        <!-- PAGE INTRO -->
+        <div
+          v-if="histories?.length"
+          class="mb-4 flex w-full bg-[#0A6CFF]/10 rounded-lg px-1 py-2 items-center justify-between gap-3 px-1"
+        >
+          <div class="flex min-w-0  items-center gap-3">
+            <Icon name="lucide:scroll-text" class="h-7 w-7 shrink-0 text-[#0B2F6B]" />
+            <div class="min-w-0">
+              <p class="text-[9px] font-bold tracking-widest text-[#0A6CFF] sm:text-[10px]">
+                PERFORMANCE ARCHIVE
+              </p>
+              <h2 class="text-xs font-bold tracking-tight text-[#0B2F6B] sm:text-base">
+                Your exam history
               </h2>
+            </div>
+          </div>
 
-              <div v-if="subjectsFor(exam).length" class="ticket__chips">
-                <span v-for="s in subjectsFor(exam)" :key="s" class="chip">
-                  {{ formatSubject(s) }}
-                </span>
+          <span
+            class="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#0A6CFF] shadow-[0_4px_12px_rgba(20,49,109,0.08)] ring-1 ring-blue-50"
+          >
+            {{ histories.length }}
+            {{ histories.length === 1 ? "Attempt" : "Attempts" }}
+          </span>
+        </div>
+
+        <!-- LOADING SKELETONS -->
+        <ul
+          v-if="loading && !histories?.length"
+          class="m-0 flex w-full list-none flex-col gap-3 p-0"
+        >
+          <li
+            v-for="n in 3"
+            :key="n"
+            class="animate-pulse rounded-3xl bg-white p-4 shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
+          >
+            <div class="flex items-center gap-3">
+              <div class="h-16 w-16 shrink-0 rounded-full bg-blue-100"></div>
+              <div class="min-w-0 flex-1">
+                <div class="h-3 w-2/5 rounded-lg bg-blue-100"></div>
+                <div class="mt-3 h-5 w-3/5 rounded-lg bg-blue-100"></div>
               </div>
             </div>
 
-            <!-- SCORE SEAL -->
-            <div class="seal" :class="bandClass(exam.percentage)">
-              <span class="seal__ring">
-                <span class="seal__pct">
-                  {{ hasNumber(exam.percentage) ? Math.round(exam.percentage) : "—" }}
-                  <small v-if="hasNumber(exam.percentage)">%</small>
-                </span>
+            <div class="mt-4 h-[88px] rounded-2xl bg-blue-50"></div>
+            <div class="mt-4 h-11 rounded-2xl bg-blue-100"></div>
+          </li>
+        </ul>
 
-                <span class="seal__agg">
-                  {{ formatAggregate(exam) }}
-                </span>
-              </span>
-            </div>
+        <!-- EMPTY STATE -->
+        <div
+          v-else-if="!histories?.length && !loadError"
+          class="mx-auto flex min-h-[55vh] w-full max-w-[560px] flex-col items-center justify-center px-3 text-center"
+        >
+          <div
+            class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#0A6CFF] shadow-[0_6px_18px_rgba(20,49,109,0.10)]"
+          >
+            <Icon name="lucide:scroll-text" class="h-7 w-7" />
           </div>
 
-          <!-- PERFORATION -->
-          <div class="ticket__perforation" role="presentation"></div>
+          <h2 class="text-base font-semibold text-[#0B2F6B]">No record yet</h2>
 
-          <!-- STATS -->
-          <dl class="ticket__stats">
-            <div class="stat">
-              <dt>Questions</dt>
-              <dd>{{ exam.total ?? "—" }}</dd>
+          <p class="mt-1.5 max-w-[300px] text-xs leading-relaxed text-slate-500">
+            Finish a practice exam and it'll be filed here.
+          </p>
+
+          <button
+            type="button"
+            class="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-5 text-xs font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95"
+            @click="goHome"
+          >
+            <Icon name="lucide:arrow-left" class="h-4 w-4" />
+            Start practicing
+          </button>
+        </div>
+
+        <!-- HISTORY LIST -->
+        <ul
+          v-else-if="histories?.length"
+          class="m-0 flex w-full list-none flex-col gap-3 p-0 md:gap-4"
+        >
+          <li
+            v-for="exam in sortedHistories"
+            :key="exam.id"
+            class="min-w-0 rounded-lg bg-white p-1 shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_11rem] md:items-center md:gap-6 md:p-5"
+          >
+            <!-- WHO / WHEN / SCORE -->
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="seal shrink-0" :class="bandClass(exam.percentage)">
+                <span
+                  class="flex h-16 w-16 flex-col items-center justify-center rounded-full md:h-[72px] md:w-[72px]"
+                >
+                  <span class="text-base font-bold leading-none tabular-nums">
+                    {{ hasNumber(exam.percentage) ? Math.round(exam.percentage) : "—" }}
+                    <small v-if="hasNumber(exam.percentage)" class="text-[10px] font-semibold">%</small>
+                  </span>
+
+                  <span class="mt-1 max-w-[52px] truncate text-[8px] font-semibold opacity-85 md:max-w-[60px]">
+                    {{ formatAggregate(exam) }}
+                  </span>
+                </span>
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <span class="block break-words text-[10px] font-bold uppercase leading-relaxed tracking-wide text-[#0A6CFF]">
+                  {{ examTypeLabel(exam) }}
+                  <span class="px-0.5">·</span>
+                  {{ formatDate(exam.createdAt) }}
+                </span>
+
+                <!-- subjects are shown once, here -->
+                <h2 class="mt-1 line-clamp-2 break-words text-sm font-bold leading-snug text-[#0B2F6B] md:text-base">
+                  {{ titleFor(exam) }}
+                </h2>
+              </div>
             </div>
 
-            <div class="stat">
-              <dt>Answered</dt>
-              <dd>{{ exam.answered ?? "—" }}</dd>
-            </div>
-
-            <div class="stat">
-              <dt>Unanswered</dt>
-              <dd>{{ exam.unanswered ?? "—" }}</dd>
-            </div>
-
-            <div class="stat stat--good">
-              <dt>Correct</dt>
-              <dd>{{ exam.correct ?? "—" }}</dd>
-            </div>
-
-            <div class="stat stat--bad">
-              <dt>Wrong</dt>
-              <dd>{{ exam.wrong ?? "—" }}</dd>
-            </div>
-
-            <div class="stat">
-              <dt>Time spent</dt>
-              <dd>{{ timeFor(exam) }}</dd>
-            </div>
-          </dl>
-
-          <!-- ACTIONS -->
-          <div class="ticket__actions">
-            <button type="button" class="btn btn--primary" @click="view(exam.id)">
-              <Icon name="lucide:eye" />
-              <span>View result</span>
-            </button>
-
-            <button
-              type="button"
-              class="btn btn--ghost"
-              @click="emit('review', exam.id)"
+            <!-- STATS: one joined strip -->
+            <dl
+              class="m-0 mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-lg bg-blue-100 ring-1 ring-blue-100 md:mt-0"
             >
-              <Icon name="lucide:list-checks" />
-              <span>Review answers</span>
-            </button>
+              <div
+                v-for="[label, value] in [
+                  ['Questions', exam.total],
+                  ['Answered', exam.answered],
+                  ['Unanswered', exam.unanswered],
+                  ['Correct', exam.correct],
+                  ['Wrong', exam.wrong],
+                  ['Time spent', timeFor(exam)],
+                ]"
+                :key="label"
+                class="min-w-0 bg-blue-50 px-3 py-2"
+              >
+                <dt class="mb-0.5 truncate text-[10px] leading-snug text-slate-500">{{ label }}</dt>
+                <dd class="m-0 truncate text-xs sm:text-sm font-bold tabular-nums text-[#0B2F6B]">{{ value ?? "—" }}</dd>
+              </div>
+            </dl>
 
-            <button
-              type="button"
-              class="btn btn--danger"
-              @click="deleteHistory(exam.id)"
-            >
-              <Icon name="lucide:trash-2" />
-              <span>Delete</span>
-            </button>
-          </div>
-        </li>
-      </ul>
+            <!-- ACTIONS -->
+            <div class="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:mt-0 md:grid-cols-1">
+              <button
+                type="button"
+                class="col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-[#0A6CFF] text-xs font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-[0.98] md:col-span-1"
+                @click="view(exam.id)"
+              >
+                <Icon name="lucide:eye" class="h-4 w-4 shrink-0" />
+                <span>View result</span>
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-blue-50 px-3 text-xs font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-[0.97]"
+                @click="emit('review', exam.id)"
+              >
+                <Icon name="lucide:list-checks" class="h-4 w-4 shrink-0" />
+                <span>Review answers</span>
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-blue-100 bg-white px-3 text-xs font-bold text-slate-500 transition hover:bg-blue-50 active:scale-[0.97]"
+                @click="deleteHistory(exam.id)"
+              >
+                <Icon name="lucide:trash-2" class="h-4 w-4 shrink-0" />
+                <span>Delete</span>
+              </button>
+            </div>
+          </li>
+        </ul>
+      </div>
     </main>
   </div>
 </template>
+
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap");
-
-.exam-history {
-  --bg: #f6f3ec;
-  --surface: #fffdf8;
-  --ink: #201f22;
-  --ink-soft: #6b665c;
-  --line: #e6e0d2;
-  --navy: #24304a;
-  --navy-soft: #3c4c6e;
-  --gold: #b9873b;
-  --good: #3f7a5c;
-  --good-bg: #e7f0e8;
-  --bad: #ab5137;
-  --bad-bg: #f7e9e2;
-  --mid-bg: #f4ecda;
-
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: "Inter", system-ui, sans-serif;
+/* native-app feel */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+main {
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ==========================================
-   HEADER
-========================================== */
-/* ERROR BANNER */
-.eh-error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 780px;
-  margin: 0 auto 1rem;
-  border: 1px solid var(--bad);
-  border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
-  background: var(--bad-bg);
-  color: var(--bad);
-  font-size: 0.8rem;
+/* Score seal: one blue hue, strength shows the band */
+.seal--good > span {
+  background: #0a6cff;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(10, 108, 255, 0.35);
 }
-
-.eh-error__retry {
-  flex-shrink: 0;
-  border: 1px solid var(--bad);
-  border-radius: 0.5rem;
-  padding: 0.35rem 0.7rem;
-  background: transparent;
-  color: var(--bad);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
+.seal--mid > span {
+  background: #dbeafe;
+  color: #0a6cff;
 }
-
-/* SKELETON CARDS */
-.ticket--skeleton:hover {
-  box-shadow: none;
-  transform: none;
+.seal--low > span {
+  background: #fff;
+  color: #0b2f6b;
+  border: 2px solid #bfdbfe;
 }
-
-.sk {
-  border-radius: 0.5rem;
-  background: linear-gradient(
-    90deg,
-    var(--line) 25%,
-    #f1ecdf 50%,
-    var(--line) 75%
-  );
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.3s ease-in-out infinite;
-}
-
-.sk--line {
-  height: 0.7rem;
-  width: 70%;
-  margin-top: 0.7rem;
-}
-
-.sk--short {
-  width: 40%;
-  margin-top: 0;
-}
-
-.sk--title {
-  height: 1.2rem;
-  width: 60%;
-  margin-top: 0.6rem;
-}
-
-.sk--seal {
-  width: 5rem;
-  height: 5rem;
-  flex-shrink: 0;
-  border-radius: 50%;
-}
-
-.sk--stat {
-  height: 3.2rem;
-  border-radius: 0.65rem;
-}
-
-.sk--btn {
-  height: 2.35rem;
-  width: 7rem;
-}
-
-@keyframes sk-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.seal--none > span {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sk { animation: none; }
-}
-.eh-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  min-height: 3.75rem;
-  padding: 0 1.25rem;
-  background: var(--navy);
-  color: #f4efe2;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
-}
-
-.eh-header__brand {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 0.75rem;
-}
-
-.eh-header__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex-shrink: 0;
-  border-radius: 0.75rem;
-  background: rgba(244, 239, 226, 0.12);
-  font-size: 1.1rem;
-}
-
-.eh-header__title {
-  margin: 0;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.eh-header__sub {
-  margin: 0.1rem 0 0;
-  font-size: 0.75rem;
-  color: rgba(244, 239, 226, 0.65);
-}
-
-.eh-header__home {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 0.75rem;
-  background: transparent;
-  color: inherit;
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.eh-header__home:hover {
-  background: rgba(244, 239, 226, 0.12);
-  transform: translateY(-1px);
-}
-
-/* ==========================================
-   MAIN
-========================================== */
-
-.eh-main {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 1.5rem 1rem 5rem;
-}
-
-/* Page Intro */
-.eh-intro {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  max-width: 780px;
-  margin: 0 auto 1.25rem;
-}
-
-.eh-intro__eyebrow {
-  margin: 0 0 0.25rem;
-  color: var(--gold);
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-}
-
-.eh-intro__title {
-  margin: 0;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 600;
-  color: var(--navy);
-}
-
-.eh-count {
-  flex-shrink: 0;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.35rem 0.7rem;
-  background: var(--surface);
-  color: var(--ink-soft);
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-/* ==========================================
-   EMPTY STATE
-========================================== */
-
-.eh-empty {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1rem;
-  text-align: center;
-}
-
-.eh-empty__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 4.5rem;
-  height: 4.5rem;
-  margin-bottom: 1.1rem;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--gold);
-  font-size: 1.75rem;
-}
-
-.eh-empty__title {
-  margin: 0;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.eh-empty__sub {
-  max-width: 300px;
-  margin: 0.4rem 0 0;
-  color: var(--ink-soft);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.empty-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 1.25rem;
-  border: 1px solid var(--navy);
-  border-radius: 0.6rem;
-  padding: 0.65rem 1rem;
-  background: var(--navy);
-  color: white;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-/* ==========================================
-   TICKET LIST
-========================================== */
-
-.ticket-list {
-  display: flex;
-  width: 100%;
-  max-width: 780px;
-  flex-direction: column;
-  gap: 1.1rem;
-  margin: 0 auto;
-  padding: 0;
-  list-style: none;
-}
-
-.ticket {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 1.1rem;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(36, 48, 74, 0.04);
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-.ticket:hover {
-  box-shadow: 0 10px 24px -12px rgba(36, 48, 74, 0.22);
-  transform: translateY(-1px);
-}
-
-/* ==========================================
-   TICKET TOP
-========================================== */
-
-.ticket__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem;
-}
-
-.ticket__meta {
-  min-width: 0;
-  flex: 1;
-}
-
-.ticket__eyebrow {
-  display: block;
-  overflow-wrap: anywhere;
-  color: var(--gold);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.045em;
-  line-height: 1.5;
-  text-transform: uppercase;
-}
-
-.dot {
-  padding: 0 0.15rem;
-}
-
-.ticket__title {
-  margin: 0.35rem 0 0;
-  overflow-wrap: anywhere;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--navy);
-}
-
-.ticket__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.65rem;
-}
-
-.chip {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.22rem 0.6rem;
-  background: var(--bg);
-  color: var(--ink-soft);
-  font-size: 0.68rem;
-  font-weight: 500;
-}
-
-/* ==========================================
-   SCORE SEAL
-========================================== */
-
-.seal {
-  flex-shrink: 0;
-  transform: rotate(-3deg);
-}
-
-.seal__ring {
-  display: flex;
-  width: 5rem;
-  height: 5rem;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  outline: 1px solid currentColor;
-  outline-offset: 3px;
-  font-family: "IBM Plex Mono", monospace;
-}
-
-.seal__pct {
-  font-size: 1.15rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.seal__pct small {
-  margin-left: 1px;
-  font-size: 0.65rem;
-  font-weight: 500;
-}
-
-.seal__agg {
-  max-width: 4rem;
-  margin-top: 0.15rem;
-  overflow: hidden;
-  font-size: 0.5rem;
-  font-weight: 500;
-  opacity: 0.85;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.seal--good {
-  color: var(--good);
-}
-
-.seal--mid {
-  color: var(--gold);
-}
-
-.seal--low {
-  color: var(--bad);
-}
-
-.seal--none {
-  color: var(--ink-soft);
-}
-
-/* ==========================================
-   PERFORATION
-========================================== */
-
-.ticket__perforation {
-  position: relative;
-  height: 0;
-  margin: 0 1.25rem;
-  border-top: 2px dashed var(--line);
-}
-
-.ticket__perforation::before,
-.ticket__perforation::after {
-  position: absolute;
-  top: -10px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--bg);
-  content: "";
-}
-
-.ticket__perforation::before {
-  left: -1.5rem;
-}
-
-.ticket__perforation::after {
-  right: -1.5rem;
-}
-
-/* ==========================================
-   STATS
-========================================== */
-
-.ticket__stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
-  margin: 1.1rem 1.25rem 0;
-}
-
-.stat {
-  min-width: 0;
-  border-radius: 0.65rem;
-  padding: 0.65rem 0.6rem;
-  background: var(--bg);
-}
-
-.stat dt {
-  margin: 0 0 0.2rem;
-  overflow-wrap: anywhere;
-  color: var(--ink-soft);
-  font-size: 0.62rem;
-  line-height: 1.4;
-}
-
-.stat dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--navy);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.stat--good {
-  background: var(--good-bg);
-}
-
-.stat--good dd {
-  color: var(--good);
-}
-
-.stat--bad {
-  background: var(--bad-bg);
-}
-
-.stat--bad dd {
-  color: var(--bad);
-}
-
-/* ==========================================
-   ACTIONS
-========================================== */
-
-.ticket__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 1.1rem 1.25rem 1.25rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  min-height: 2.35rem;
-  border: 1px solid transparent;
-  border-radius: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    opacity 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.btn :deep(svg) {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-.btn--primary {
-  background: var(--navy);
-  color: #f4efe2;
-}
-
-.btn--primary:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-}
-
-.btn--ghost {
-  border-color: var(--line);
-  background: transparent;
-  color: var(--ink);
-}
-
-.btn--ghost:hover {
-  background: var(--bg);
-}
-
-.btn--danger {
-  margin-left: auto;
-  background: transparent;
-  color: var(--bad);
-}
-
-.btn--danger:hover {
-  background: var(--bad-bg);
-}
-
-/* ==========================================
-   TABLET
-========================================== */
-
-@media (min-width: 640px) {
-  .eh-main {
-    padding: 1.75rem 1.5rem 5rem;
-  }
-
-  .ticket__stats {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 0.65rem;
-  }
-
-  .stat {
-    padding: 0.65rem 0.55rem;
-  }
-
-  .stat dd {
-    font-size: 1.05rem;
-  }
-}
-
-/* ==========================================
-   MOBILE
-========================================== */
-
-@media (max-width: 480px) {
-  .eh-header {
-    min-height: 3.5rem;
-    padding: 0 0.75rem;
-  }
-
-  .eh-header__brand {
-    gap: 0.55rem;
-  }
-
-  .eh-header__mark {
-    width: 2.15rem;
-    height: 2.15rem;
-    border-radius: 0.6rem;
-    font-size: 1rem;
-  }
-
-  .eh-header__title {
-    font-size: 0.95rem;
-  }
-
-  .eh-header__sub {
-    font-size: 0.65rem;
-  }
-
-  .eh-header__home {
-    width: 2.15rem;
-    height: 2.15rem;
-    font-size: 1.1rem;
-  }
-
-  .eh-main {
-    padding: 1rem 0.65rem 4rem;
-  }
-
-  .eh-intro {
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-
-  .eh-intro__eyebrow {
-    font-size: 0.58rem;
-  }
-
-  .eh-intro__title {
-    font-size: 1.1rem;
-  }
-
-  .eh-count {
-    font-size: 0.62rem;
-  }
-
-  .ticket-list {
-    gap: 0.85rem;
-  }
-
-  .ticket {
-    border-radius: 0.9rem;
-  }
-
-  .ticket__top {
-    gap: 0.75rem;
-    padding: 1rem;
-  }
-
-  .ticket__eyebrow {
-    font-size: 0.59rem;
-    letter-spacing: 0.025em;
-  }
-
-  .ticket__title {
-    font-size: 1.05rem;
-  }
-
-  .ticket__chips {
-    gap: 0.3rem;
-    margin-top: 0.55rem;
-  }
-
-  .chip {
-    padding: 0.2rem 0.5rem;
-    font-size: 0.61rem;
-  }
-
-  .seal__ring {
-    width: 4.35rem;
-    height: 4.35rem;
-  }
-
-  .seal__pct {
-    font-size: 1rem;
-  }
-
-  .seal__agg {
-    max-width: 3.5rem;
-    font-size: 0.45rem;
-  }
-
-  .ticket__perforation {
-    margin: 0 1rem;
-  }
-
-  .ticket__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    margin: 1rem;
-  }
-
-  .stat {
-    padding: 0.6rem 0.65rem;
-  }
-
-  .stat dt {
-    font-size: 0.6rem;
-  }
-
-  .stat dd {
-    font-size: 0.95rem;
-  }
-
-  .ticket__actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    padding: 0 1rem 1rem;
-  }
-
-  .btn {
-    width: 100%;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.4rem;
-    font-size: 0.7rem;
-  }
-
-  .btn--primary {
-    grid-column: span 2;
-  }
-
-  .btn--danger {
-    margin-left: 0;
-  }
-}
-
-/* ==========================================
-   VERY SMALL DEVICES
-========================================== */
-
-@media (max-width: 350px) {
-  .eh-main {
-    padding-inline: 0.45rem;
-  }
-
-  .ticket__top {
-    padding: 0.85rem;
-  }
-
-  .ticket__title {
-    font-size: 0.95rem;
-  }
-
-  .seal__ring {
-    width: 3.9rem;
-    height: 3.9rem;
-  }
-
-  .ticket__stats {
-    margin-inline: 0.85rem;
-  }
-
-  .ticket__actions {
-    padding-inline: 0.85rem;
-  }
-
-  .btn {
-    font-size: 0.65rem;
-  }
-}
-
-/* ==========================================
-   REDUCED MOTION
-========================================== */
-
-@media (prefers-reduced-motion: reduce) {
-  .ticket,
-  .btn,
-  .eh-header__home {
-    transition: none;
-  }
-
-  .ticket:hover,
-  .btn:hover {
-    transform: none;
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }
 </style>

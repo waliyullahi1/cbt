@@ -1,48 +1,77 @@
 <template>
-  <div class="dict-search">
+  <div
+    class="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#F3F8FF] text-[#201F22] font-['Inter',system-ui,sans-serif]"
+  >
     <!-- ========================================= -->
-    <!-- HEADER -->
+    <!-- DECORATIVE BACKGROUND (non-interactive) -->
     <!-- ========================================= -->
-    <header class="ds-header">
-      <div class="ds-header__brand">
-        <span class="ds-header__mark">
-          <Icon name="lucide:book-marked" />
-        </span>
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <Icon name="lucide:book-open" class="absolute right-[-10px] top-[220px] h-14 w-14 rotate-12 text-blue-200/60" />
+      <Icon name="lucide:flask-conical" class="absolute bottom-[110px] left-3 h-10 w-10 -rotate-12 text-blue-200/60" />
+      <Icon name="lucide:pencil" class="absolute bottom-[130px] right-4 h-12 w-12 text-blue-200/60" />
+      <Icon name="lucide:atom" class="absolute bottom-6 left-5 h-12 w-12 text-blue-200/60" />
+    </div>
 
-        <div class="ds-header__heading">
-          <h1 class="ds-header__title">Dictionary</h1>
-          <p class="ds-header__sub">
-            Look up any word — fully offline
-          </p>
+    <!-- ========================================= -->
+    <!-- APP BAR -->
+    <!-- ========================================= -->
+    <header
+      class="relative z-10 shrink-0 sm:bg-[#0B2F6B]  bg-transparent  sm:text-white text-[#5B6E8F] sm:shadow-[0_4px_16px_rgba(11,47,107,0.25)]  shadow-[0_1px_2px_rgba(36 sm:backdrop-blur-[4px] sm:backdrop-saturate-[180%]"
+    >
+      <div class="flex min-h-12 items-center justify-between gap-3 sm:px-4  px-2 py-2">
+        <div class="flex min-w-0 items-center gap-3">
+         <button
+          type="button"
+          class="flex sm:hidden h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
+          aria-label="Open menu"
+          @click="menuOpen = true"
+        >
+          <img src="/images/logos.svg"   class=" w"  >
+        </button>
+          <span
+            class="sm:flex hidden  sm:h-10 sm:w-10 w-8 h-8 shrink-0 items-center justify-center rounded-xl bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)]"
+          >
+            <Icon name="lucide:book-marked" class="sm:h-5 h-3 w-3 sm:w-5" />
+          </span>
+
+          <div class="min-w-0">
+            <h1 class="truncate  text-[15px] font-bold leading-tight tracking-tight">
+              Dictionary
+            </h1>
+            <p class="mt-0.5 truncate  text-[11px]  leading-tight  sm:text-white/65">
+              Look up any word — fully offline
+            </p>
+          </div>
         </div>
-      </div>
 
-      <button
-        type="button"
-        class="ds-header__home"
-        aria-label="Go home"
-        @click="goHome"
-      >
-        <Icon name="lucide:house" />
-      </button>
+        <button
+          type="button"
+          class="flex sm:h-11 h-9 w-9 sm:w-11 shrink-0 items-center justify-center rounded-full sm:bg-[#0A6CFF] bg-white sm:shadow-[0_4px_10px_rgba(10,108,255,0.45)] shadow-[0_1px_2px_rgba(36,48,74,0.04)] transition active:scale-95"
+          aria-label="Go home"
+          @click="goHome"
+        >
+          <Icon name="lucide:house" class="h-5  w-5" />
+        </button>
+      </div>
     </header>
 
     <!-- ========================================= -->
     <!-- MAIN -->
     <!-- ========================================= -->
-    <main class="ds-main">
+    <main
+      class="relative z-10  h-dvh bg-\-600 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-2 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4"
+    >
       <!-- SEARCH BOX -->
-      <div class="lookup-slip">
-        <Icon
-          name="lucide:search"
-          class="lookup-slip__icon"
-        />
+      <div
+        class="mx-auto flex h-12 w-full max-w-[700px] items-center gap-2 rounded-sm border border-blue-100 bg-white px-3 shadow-[0_8px_28px_rgba(20,49,109,0.08)] transition focus-within:border-[#0A6CFF] focus-within:ring-2 focus-within:ring-[#0A6CFF]/20"
+      >
+        <Icon name="lucide:search" class="h-5 w-5 shrink-0 text-[#0B2F6B]" />
 
         <input
           ref="inputEl"
           v-model="query"
           type="text"
-          class="lookup-slip__input"
+          class="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-[#0B2F6B] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-slate-400"
           placeholder="Type a word…"
           autocomplete="off"
           spellcheck="false"
@@ -56,34 +85,32 @@
         <button
           v-if="query"
           type="button"
-          class="lookup-slip__clear"
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0A6CFF] transition active:scale-90"
           aria-label="Clear search"
           @click="onClear"
         >
-          <Icon name="lucide:x" />
+          <Icon name="lucide:x" class="h-4 w-4" />
         </button>
       </div>
 
       <!-- LIVE SUGGESTIONS -->
       <ul
         v-if="showSuggestions"
-        class="suggestions"
+        class="mx-auto mt-3 max-h-[300px] w-full max-w-[700px] list-none overflow-y-auto rounded-3xl bg-white p-2 shadow-[0_8px_24px_rgba(20,49,109,0.08)] ring-1 ring-blue-50"
       >
         <li
           v-for="(row, i) in results"
           :key="row.word"
-          class="suggestion"
-          :class="{
-            'suggestion--active': i === highlighted
-          }"
+          class="flex min-w-0 flex-col gap-0.5 rounded-2xl px-3 py-2.5 transition active:bg-blue-50"
+          :class="i === highlighted ? 'bg-blue-50' : ''"
           @mouseenter="highlighted = i"
           @click="selectWord(row.word)"
         >
-          <span class="suggestion__word">
+          <span class="truncate text-sm font-bold text-[#0B2F6B]">
             {{ row.word }}
           </span>
 
-          <span class="suggestion__meaning">
+          <span class="truncate text-xs text-slate-500">
             {{ firstSense(row.meaning) }}
           </span>
         </li>
@@ -92,29 +119,29 @@
       <!-- LOADING -->
       <div
         v-if="loading && !currentWord"
-        class="ds-status"
+        class="mt-5 flex items-center justify-center gap-2 text-sm text-slate-500"
       >
-        <Icon
-          name="lucide:loader-2"
-          class="ds-status__spin"
-        />
+        <Icon name="lucide:loader-2" class="h-4 w-4 animate-spin" />
         <span>Searching…</span>
       </div>
 
+      <!-- ERROR -->
       <div
         v-if="error"
-        class="ds-empty"
+        class="mx-auto flex w-full max-w-[560px] flex-col items-center px-3 pb-6 pt-12 text-center"
         role="alert"
       >
-        <div class="ds-empty__mark ds-empty__mark--bad">
-          <Icon name="lucide:triangle-alert" />
+        <div
+          class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500 shadow-[0_6px_18px_rgba(239,68,68,0.15)]"
+        >
+          <Icon name="lucide:triangle-alert" class="h-7 w-7" />
         </div>
 
-        <h2 class="ds-empty__title">
+        <h2 class="text-base font-semibold text-[#0B2F6B]">
           Dictionary couldn't be loaded
         </h2>
 
-        <p class="ds-empty__sub">
+        <p class="mt-1.5 text-xs leading-relaxed text-slate-500">
           {{ errorMessage }}
         </p>
       </div>
@@ -122,17 +149,19 @@
       <!-- EMPTY / IDLE STATE -->
       <div
         v-if="!error && !query && !currentWord"
-        class="ds-empty"
+        class="mx-auto flex w-full max-w-[560px] flex-col items-center px-3 pb-6 pt-12 text-center"
       >
-        <div class="ds-empty__mark">
-          <Icon name="lucide:library-big" />
+        <div
+          class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#0A6CFF] shadow-[0_6px_18px_rgba(20,49,109,0.10)]"
+        >
+          <Icon name="lucide:library-big" class="h-7 w-7" />
         </div>
 
-        <h2 class="ds-empty__title">
+        <h2 class="text-base font-semibold text-[#0B2F6B]">
           Nothing looked up yet
         </h2>
 
-        <p class="ds-empty__sub">
+        <p class="mt-1.5 text-xs leading-relaxed text-slate-500">
           Start typing above to search the offline dictionary.
         </p>
       </div>
@@ -140,17 +169,19 @@
       <!-- NOT FOUND -->
       <div
         v-if="!error && notFound && query"
-        class="ds-empty"
+        class="mx-auto flex w-full max-w-[560px] flex-col items-center px-3 pb-6 pt-12 text-center"
       >
-        <div class="ds-empty__mark ds-empty__mark--bad">
-          <Icon name="lucide:file-question" />
+        <div
+          class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500 shadow-[0_6px_18px_rgba(239,68,68,0.15)]"
+        >
+          <Icon name="lucide:file-question" class="h-7 w-7" />
         </div>
 
-        <h2 class="ds-empty__title">
+        <h2 class="break-words text-base font-semibold text-[#0B2F6B]">
           "{{ lastLookedUp }}" isn't in the dictionary
         </h2>
 
-        <p class="ds-empty__sub">
+        <p class="mt-1.5 text-xs leading-relaxed text-slate-500">
           Check the spelling, or try a different word.
         </p>
       </div>
@@ -158,68 +189,74 @@
       <!-- WORD DETAIL CARD -->
       <article
         v-if="!error && currentWord"
-        class="index-card"
+        class="mx-auto mt-4 w-full max-w-[700px] overflow-hidden rounded-lg bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
       >
         <!-- CARD HEADER -->
-        <div class="index-card__top">
-          <div class="index-card__heading">
-            <h2 class="index-card__word">
-              {{ currentWord.word }}
-            </h2>
-
-            <span
-              v-if="currentWord.partOfSpeech"
-              class="index-card__pos"
+        <div class="flex min-w-0 items-start justify-between gap-3 p-4 pb-3">
+          <div class="flex min-w-0 items-center gap-3">
+            <div
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600"
             >
-              {{ currentWord.partOfSpeech }}
-            </span>
+              <Icon name="lucide:book-open" class="h-6 w-6" stroke-width="1.8" />
+            </div>
+
+            <div class="min-w-0">
+              <h2 class="break-words text-xl font-bold leading-tight text-[#0B2F6B]">
+                {{ currentWord.word }}
+              </h2>
+
+              <span
+                v-if="currentWord.partOfSpeech"
+                class="mt-1 inline-block max-w-full truncate rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-[#0A6CFF]"
+              >
+                {{ currentWord.partOfSpeech }}
+              </span>
+            </div>
           </div>
 
           <button
             type="button"
-            class="index-card__close"
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition active:bg-slate-200"
             aria-label="Close definition"
             @click="onClear"
           >
-            <Icon name="lucide:x" />
+            <Icon name="lucide:x" class="h-4 w-4" />
           </button>
         </div>
 
-        <div
-          class="index-card__rule"
-          role="presentation"
-        />
+        <div class="mx-4 border-t border-dashed border-blue-100" role="presentation" />
 
         <!-- HAS REAL DEFINITION -->
-        <div
-          v-if="currentWord.hasDefinition"
-          class="index-card__body"
-        >
-          <ol class="senses">
+        <div v-if="currentWord.hasDefinition" class="p-4 pb-5">
+          <ol class="m-0 flex list-none flex-col gap-3 p-0">
             <li
               v-for="(sense, i) in senseList(currentWord.meaning)"
               :key="i"
-              class="sense"
+              class="flex items-start gap-2.5"
             >
-              {{ sense }}
+              <span
+                class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-[#0A6CFF]"
+              >
+                {{ i + 1 }}
+              </span>
+              <span class="min-w-0 break-words text-sm leading-relaxed text-[#201F22]">
+                {{ sense }}
+              </span>
             </li>
           </ol>
 
           <p
             v-if="currentWord.example"
-            class="index-card__example"
+            class="mt-4 break-words rounded-2xl bg-[#F3F8FF] px-3.5 py-3 text-[13px] italic leading-relaxed text-slate-500"
           >
             &ldquo;{{ currentWord.example }}&rdquo;
           </p>
         </div>
 
         <!-- VALID WORD WITHOUT DEFINITION -->
-        <div
-          v-else
-          class="index-card__body"
-        >
-          <p class="index-card__no-def">
-            <Icon name="lucide:info" />
+        <div v-else class="p-4 pb-5">
+          <p class="m-0 flex items-start gap-2.5 rounded-2xl bg-[#F3F8FF] px-3.5 py-3 text-[13px] leading-relaxed text-slate-500">
+            <Icon name="lucide:info" class="mt-0.5 h-4 w-4 shrink-0 text-[#0A6CFF]" />
 
             <span>
               This is a recognized word, but no definition is on file
@@ -427,894 +464,17 @@ const goHome = () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap');
-
-/* ==================================================
-   ROOT
-================================================== */
-
-.dict-search {
-  --bg: #f6f3ec;
-  --surface: #fffdf8;
-  --ink: #201f22;
-  --ink-soft: #6b665c;
-  --line: #e6e0d2;
-  --navy: #24304a;
-  --navy-soft: #3c4c6e;
-  --gold: #b9873b;
-  --bad: #ab5137;
-  --bad-bg: #f7e9e2;
-
-  display: flex;
-  flex-direction: column;
-
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-
-  overflow: hidden;
-
-  background: var(--bg);
-  color: var(--ink);
-
-  font-family: 'Inter', system-ui, sans-serif;
+/* native-app feel */
+button {
+  -webkit-tap-highlight-color: transparent;
 }
-
-/* ==================================================
-   HEADER
-================================================== */
-
-.ds-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  flex-shrink: 0;
-
-  min-height: 3.75rem;
-  padding: 0.65rem 1.25rem;
-
-  background: var(--navy);
-  color: #f4efe2;
-
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+main {
+  -webkit-overflow-scrolling: touch;
 }
-
-.ds-header__brand {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-
-  min-width: 0;
-}
-
-.ds-header__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  width: 2.45rem;
-  height: 2.45rem;
-
-  border-radius: 0.75rem;
-
-  background: rgba(244, 239, 226, 0.12);
-
-  font-size: 1.1rem;
-}
-
-.ds-header__heading {
-  min-width: 0;
-}
-
-.ds-header__title {
-  margin: 0;
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.05rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
-}
-
-.ds-header__sub {
-  margin: 0.2rem 0 0;
-
-  color: rgba(244, 239, 226, 0.65);
-
-  font-size: 0.72rem;
-  line-height: 1.3;
-}
-
-.ds-header__home {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  width: 2.5rem;
-  height: 2.5rem;
-
-  border: none;
-  border-radius: 0.75rem;
-
-  background: transparent;
-  color: inherit;
-
-  font-size: 1.15rem;
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.ds-header__home:hover {
-  background: rgba(244, 239, 226, 0.12);
-  transform: translateY(-1px);
-}
-
-.ds-header__home:active {
-  transform: scale(0.95);
-}
-
-/* ==================================================
-   MAIN
-================================================== */
-
-.ds-main {
-  flex: 1;
-  min-height: 0;
-
-  width: 100%;
-  max-width: 100%;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  padding: 1.25rem 1rem 4rem;
-
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
-}
-
-/* ==================================================
-   SEARCH BOX
-================================================== */
-
-.lookup-slip {
-  position: relative;
-
-  display: flex;
-  align-items: center;
-
-  width: min(100%, 700px);
-  min-height: 3.2rem;
-
-  margin: 0 auto;
-  padding: 0.45rem 0.85rem;
-
-  gap: 0.6rem;
-
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.85rem;
-
-  box-shadow:
-    0 1px 2px rgba(36, 48, 74, 0.05);
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.lookup-slip:focus-within {
-  border-color: var(--navy-soft);
-
-  box-shadow:
-    0 0 0 3px rgba(60, 76, 110, 0.12);
-}
-
-.lookup-slip__icon {
-  flex-shrink: 0;
-
-  color: var(--ink-soft);
-  font-size: 1rem;
-}
-
-.lookup-slip__input {
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-
-  border: none;
-  outline: none;
-
-  background: transparent;
-
-  padding: 0.25rem 0;
-
-  color: var(--ink);
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.1rem;
-  line-height: 1.4;
-}
-
-.lookup-slip__input::placeholder {
-  color: var(--ink-soft);
-
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 0.95rem;
-}
-
-.lookup-slip__clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  width: 1.8rem;
-  height: 1.8rem;
-
-  border: none;
-  border-radius: 50%;
-
-  background: var(--bg);
-  color: var(--ink-soft);
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.lookup-slip__clear:hover {
-  background: var(--line);
-}
-
-.lookup-slip__clear:active {
-  transform: scale(0.9);
-}
-
-/* ==================================================
-   SUGGESTIONS
-================================================== */
-
-.suggestions {
-  width: min(100%, 700px);
-
-  max-height: 300px;
-
-  list-style: none;
-
-  margin: 0.55rem auto 0;
-  padding: 0.35rem;
-
-  overflow-y: auto;
-
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.85rem;
-
-  box-shadow:
-    0 8px 20px -12px rgba(36, 48, 74, 0.25);
-}
-
-.suggestion {
-  display: flex;
-  align-items: center;
-
-  min-width: 0;
-
-  gap: 0.65rem;
-
-  padding: 0.65rem 0.7rem;
-
-  border-radius: 0.6rem;
-
-  cursor: pointer;
-
-  transition: background 0.15s ease;
-}
-
-.suggestion--active,
-.suggestion:hover {
-  background: var(--bg);
-}
-
-.suggestion__word {
-  flex-shrink: 0;
-  max-width: 42%;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  color: var(--navy);
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.suggestion__meaning {
-  flex: 1;
-  min-width: 0;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  color: var(--ink-soft);
-
-  font-size: 0.8rem;
-  line-height: 1.4;
-}
-
-/* ==================================================
-   STATUS
-================================================== */
-
-.ds-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  gap: 0.5rem;
-
-  margin-top: 1.25rem;
-
-  color: var(--ink-soft);
-
-  font-size: 0.85rem;
-}
-
-.ds-status__spin {
-  animation: ds-spin 0.8s linear infinite;
-}
-
-@keyframes ds-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ==================================================
-   EMPTY STATE
-================================================== */
-
-.ds-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  width: 100%;
-  max-width: 560px;
-
-  margin: 0 auto;
-
-  padding: 4rem 1rem 2rem;
-
-  text-align: center;
-}
-
-.ds-empty__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 4.5rem;
-  height: 4.5rem;
-
-  margin-bottom: 1.1rem;
-
-  border: 1px solid var(--line);
-  border-radius: 50%;
-
-  background: var(--surface);
-  color: var(--gold);
-
-  font-size: 1.75rem;
-}
-
-.ds-empty__mark--bad {
-  border-color: var(--bad-bg);
-  background: var(--bad-bg);
-  color: var(--bad);
-}
-
-.ds-empty__title {
-  max-width: 100%;
-
-  margin: 0;
-
-  color: var(--ink);
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.15rem;
-  font-weight: 600;
-  line-height: 1.4;
-
-  overflow-wrap: anywhere;
-}
-
-.ds-empty__sub {
-  max-width: 32rem;
-
-  margin: 0.45rem 0 0;
-
-  color: var(--ink-soft);
-
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-/* ==================================================
-   WORD DETAIL CARD
-================================================== */
-
-.index-card {
-  position: relative;
-
-  width: 100%;
-  max-width: 700px;
-
-  margin: 1.1rem auto 0;
-
-  overflow: hidden;
-
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-
-  box-shadow:
-    0 10px 24px -14px rgba(36, 48, 74, 0.22);
-}
-
-/* Ruled paper background */
-.index-card::before {
-  content: '';
-
-  position: absolute;
-  inset: 0;
-
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      transparent,
-      transparent 1.65rem,
-      var(--line) 1.65rem,
-      var(--line) calc(1.65rem + 1px)
-    );
-
-  opacity: 0.5;
-
-  pointer-events: none;
-}
-
-/* ==================================================
-   CARD HEADER
-================================================== */
-
-.index-card__top {
-  position: relative;
-
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-
-  min-width: 0;
-
-  gap: 1rem;
-
-  padding: 1.25rem 1.25rem 0.6rem;
-}
-
-.index-card__heading {
-  min-width: 0;
-}
-
-.index-card__word {
-  max-width: 100%;
-
-  margin: 0;
-
-  color: var(--navy);
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.65rem;
-  font-weight: 600;
-  line-height: 1.25;
-
-  overflow-wrap: anywhere;
-}
-
-.index-card__pos {
-  display: inline-block;
-
-  max-width: 100%;
-
-  margin-top: 0.4rem;
-  padding: 0.2rem 0.55rem;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  border: 1px solid var(--line);
-  border-radius: 999px;
-
-  background: var(--bg);
-  color: var(--gold);
-
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.index-card__close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  flex-shrink: 0;
-
-  width: 2.15rem;
-  height: 2.15rem;
-
-  border: none;
-  border-radius: 50%;
-
-  background: transparent;
-  color: var(--ink-soft);
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.index-card__close:hover {
-  background: var(--bg);
-}
-
-.index-card__close:active {
-  transform: scale(0.92);
-}
-
-/* ==================================================
-   CARD CONTENT
-================================================== */
-
-.index-card__rule {
-  position: relative;
-
-  height: 0;
-
-  margin: 0.35rem 1.25rem 0;
-
-  border-top: 2px dashed var(--line);
-}
-
-.index-card__body {
-  position: relative;
-
-  padding: 1rem 1.25rem 1.5rem;
-}
-
-.senses {
-  display: flex;
-  flex-direction: column;
-
-  gap: 0.65rem;
-
-  margin: 0;
-  padding-left: 1.2rem;
-}
-
-.sense {
-  color: var(--ink);
-
-  font-size: 0.98rem;
-  line-height: 1.7;
-
-  overflow-wrap: anywhere;
-}
-
-.index-card__example {
-  margin: 1rem 0 0;
-  padding-left: 0.85rem;
-
-  border-left: 2px solid var(--line);
-
-  color: var(--ink-soft);
-
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 0.95rem;
-  font-style: italic;
-  line-height: 1.6;
-
-  overflow-wrap: anywhere;
-}
-
-.index-card__no-def {
-  display: flex;
-  align-items: flex-start;
-
-  gap: 0.55rem;
-
-  margin: 0;
-
-  color: var(--ink-soft);
-
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.index-card__no-def :deep(svg) {
-  flex-shrink: 0;
-  margin-top: 0.2rem;
-}
-
-/* ==================================================
-   TABLET
-================================================== */
-
-@media (max-width: 768px) {
-  .ds-main {
-    padding: 1rem 0.85rem 3rem;
-  }
-
-  .lookup-slip {
-    min-height: 3rem;
-  }
-
-  .index-card__word {
-    font-size: 1.45rem;
-  }
-
-  .index-card__body {
-    padding: 0.9rem 1rem 1.25rem;
-  }
-
-  .index-card__top {
-    padding: 1rem 1rem 0.55rem;
-  }
-
-  .index-card__rule {
-    margin-left: 1rem;
-    margin-right: 1rem;
-  }
-}
-
-/* ==================================================
-   MOBILE
-================================================== */
-
-@media (max-width: 480px) {
-  .ds-header {
-    min-height: 3.4rem;
-    padding: 0.55rem 0.75rem;
-  }
-
-  .ds-header__brand {
-    gap: 0.55rem;
-  }
-
-  .ds-header__mark {
-    width: 2.15rem;
-    height: 2.15rem;
-
-    border-radius: 0.6rem;
-
-    font-size: 0.95rem;
-  }
-
-  .ds-header__title {
-    font-size: 0.98rem;
-  }
-
-  .ds-header__sub {
-    margin-top: 0.12rem;
-    font-size: 0.64rem;
-  }
-
-  .ds-header__home {
-    width: 2.2rem;
-    height: 2.2rem;
-
-    border-radius: 0.6rem;
-
-    font-size: 1rem;
-  }
-
-  .ds-main {
-    padding: 0.8rem 0.65rem 2.5rem;
-  }
-
-  .lookup-slip {
-    width: 100%;
-
-    min-height: 2.9rem;
-
-    padding: 0.35rem 0.7rem;
-    gap: 0.45rem;
-
-    border-radius: 0.7rem;
-  }
-
-  .lookup-slip__icon {
-    font-size: 0.9rem;
-  }
-
-  .lookup-slip__input {
-    font-size: 0.98rem;
-  }
-
-  .lookup-slip__input::placeholder {
-    font-size: 0.82rem;
-  }
-
-  .lookup-slip__clear {
-    width: 1.65rem;
-    height: 1.65rem;
-  }
-
-  .suggestions {
-    margin-top: 0.45rem;
-    border-radius: 0.7rem;
-  }
-
-  .suggestion {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.15rem;
-
-    padding: 0.6rem 0.65rem;
-  }
-
-  .suggestion__word {
-    max-width: 100%;
-    font-size: 0.9rem;
-  }
-
-  .suggestion__meaning {
-    width: 100%;
-    max-width: 100%;
-
-    font-size: 0.75rem;
-  }
-
-  .ds-empty {
-    padding: 3rem 0.75rem 1.5rem;
-  }
-
-  .ds-empty__mark {
-    width: 3.8rem;
-    height: 3.8rem;
-
-    margin-bottom: 0.9rem;
-
-    font-size: 1.45rem;
-  }
-
-  .ds-empty__title {
-    font-size: 1rem;
-  }
-
-  .ds-empty__sub {
-    font-size: 0.78rem;
-    line-height: 1.55;
-  }
-
-  .index-card {
-    margin-top: 0.85rem;
-    border-radius: 0.8rem;
-  }
-
-  .index-card__top {
-    gap: 0.65rem;
-    padding: 0.9rem 0.85rem 0.5rem;
-  }
-
-  .index-card__word {
-    font-size: 1.3rem;
-  }
-
-  .index-card__pos {
-    margin-top: 0.3rem;
-    padding: 0.15rem 0.45rem;
-
-    font-size: 0.6rem;
-  }
-
-  .index-card__close {
-    width: 1.9rem;
-    height: 1.9rem;
-  }
-
-  .index-card__rule {
-    margin-left: 0.85rem;
-    margin-right: 0.85rem;
-  }
-
-  .index-card__body {
-    padding: 0.8rem 0.85rem 1.15rem;
-  }
-
-  .senses {
-    gap: 0.45rem;
-    padding-left: 1.05rem;
-  }
-
-  .sense {
-    font-size: 0.86rem;
-    line-height: 1.6;
-  }
-
-  .index-card__example {
-    margin-top: 0.8rem;
-    padding-left: 0.65rem;
-
-    font-size: 0.82rem;
-    line-height: 1.55;
-  }
-
-  .index-card__no-def {
-    gap: 0.4rem;
-    font-size: 0.8rem;
-    line-height: 1.55;
-  }
-}
-
-/* ==================================================
-   VERY SMALL DEVICES
-================================================== */
-
-@media (max-width: 340px) {
-  .ds-header__sub {
-    display: none;
-  }
-
-  .ds-main {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  .index-card__word {
-    font-size: 1.18rem;
-  }
-
-  .sense {
-    font-size: 0.82rem;
-  }
-}
-
-/* ==================================================
-   REDUCE MOTION
-================================================== */
-
 @media (prefers-reduced-motion: reduce) {
-  .ds-status__spin {
-    animation: none;
-  }
-
-  .ds-header__home,
-  .lookup-slip,
-  .lookup-slip__clear,
-  .index-card__close,
-  .suggestion {
-    transition: none;
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }
 </style>

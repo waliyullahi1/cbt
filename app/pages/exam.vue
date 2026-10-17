@@ -255,13 +255,6 @@ function restoreQuestionButton() {
   }
 }
 
- 
-  
-//   await appWindow.setDecorations(false)
-//   await appWindow.setResizable(false)
-//   await appWindow.setFullscreen(true)
-//   await appWindow.setAlwaysOnTop(true)
-
 const leave = async ()=> {
      await navigateTo('/')
 }
@@ -446,43 +439,7 @@ await save({
   showExamReport.value = true
 }
 
-// function pauseExam() {
-//   timer.value.pause()
-// }
-
-  console.log(appState.value.examResult);
-
-// function resumeExam() {
-//   timer.value.resume()
-// }
-
-
-// function resetExam() {
-//   timer.value.reset()
-// }
-
-// // Reset to 30 minutes
-// function reset30Minutes() {
-//   timer.value.reset(1800)
-// }
-
-// Reset to 5 minutes
-// function reset5Minutes() {
-//   timer.value.reset(300)
-// }
-
-// function addOneMinute() {
-//   timer.value.timeLeft += 60
-// }
-
-// function removeOneMinute() {
-//   timer.value.timeLeft -= 60
-// }
-// const currentTime = ref(0)
-
-// function ticking(seconds) {
-//   currentTime.value = seconds
-// }
+console.log(appState.value.examResult);
 
 function timeFinished() {
   submitExam()
@@ -490,7 +447,6 @@ function timeFinished() {
   
 }
 
-// import { onMounted, onBeforeUnmount } from "vue"
 function selectAnswer(letter) {
   if (!currentQuestion.value) return
 
@@ -625,16 +581,6 @@ function ticking(seconds) {
   currentTime.value = seconds
 }
 onMounted( async () => {
-  
-  // await load()
-  // console.log(histories.value);
-  
-    // if (!appState.value.selectedSubjects?.length) return
-  
-     
-  
-   
-
 
     let globalIndex = 1
       if (appState.value.selectedSubjects?.length> 0 &&  !appState.value.reviewQuestions) {
@@ -706,38 +652,90 @@ onBeforeUnmount(async () => {
   }
 })
 
+// ==========================================
+// DISPLAY HELPERS (new: keep the template short)
+// ==========================================
 
+const attemptedCount = computed(() => {
+  return (
+    currentSubject.value?.questions?.filter(
+      (question) => question.userAnswer
+    ).length || 0
+  )
+})
+
+const totalCount = computed(() => {
+  return currentSubject.value?.questions?.length || 0
+})
+
+const progressPercent = computed(() => {
+  return totalCount.value
+    ? Math.round((attemptedCount.value / totalCount.value) * 100)
+    : 0
+})
+
+// idle | selected | correct | wrong
+const optionState = (key) => {
+  const question = currentQuestion.value
+
+  if (!question) return "idle"
+
+  if (Submitted.value) {
+    if (key === question.answer) return "correct"
+    if (key === question.userAnswer) return "wrong"
+    return "idle"
+  }
+
+  return question.userAnswer === key ? "selected" : "idle"
+}
+
+// Tile style in the question navigator (one blue hue only)
+const tileClass = (question, index) => {
+  const isCurrent = currentSubject.value?.currentQuestion === index + 1
+  const answered = Boolean(question.userAnswer)
+
+  if (isCurrent) {
+    return answered
+      ? "bg-blue-100 text-[#0B2F6B] ring-2 ring-[#0A6CFF]"
+      : "bg-white text-[#0A6CFF] ring-2 ring-[#0A6CFF]"
+  }
+
+  return answered
+    ? "bg-blue-100 text-[#0B2F6B]"
+    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+}
+
+// Result strip under each tile after submitting
 const getQuestionClass = (question, index) => {
   if (Submitted.value) {
     if (question.answer === question.userAnswer) {
-      return "bg-green-600 text-white"
+      return "bg-[#0A6CFF] text-white"
     }
 
     if (
       question.userAnswer &&
       question.userAnswer !== question.answer
     ) {
-      return "bg-red-500 text-white"
+      return "bg-[#0B2F6B] text-white"
     }
 
-    return "bg-orange-500 text-white"
+    return "bg-slate-400 text-white"
   }
 
   return ""
 }
-
-
-///FOr Exam Summary 
-
-
 </script>
+
 <template>
-  <div class="min-h-screen w-screen overflow-hidden bg-white">
+  <div
+    class="flex h-[100dvh] w-full select-none flex-col overflow-hidden bg-[#F3F8FF] text-[#0B2F6B] font-['Inter',system-ui,sans-serif]"
+  >
     <BookmarkModal
-  :visible="showBookmarkModal"
-  :question="bookmarkedQuestion"
-  @close="showBookmarkModal = false"
-/>
+      :visible="showBookmarkModal"
+      :question="bookmarkedQuestion"
+      @close="showBookmarkModal = false"
+    />
+
     <!-- TOP RIGHT CONTROLS -->
     <div
       class="fixed right-0 top-2 z-[100] flex h-12 items-center justify-end px-2 sm:px-6 lg:px-8"
@@ -746,48 +744,43 @@ const getQuestionClass = (question, index) => {
         v-model="showSubmitModal"
         @submit="submitExam"
       />
-
-     
     </div>
 
     <!-- NAVBAR -->
-    <NavigationExamNavBar ref="examHeader"
-   
-   :current-question="currentQuestion"
-  :question-number="currentSubject?.currentQuestion"
-  @time-finished="submitExam"
- />
+    <div class="shrink-0">
+      <NavigationExamNavBar
+        ref="examHeader"
+        :current-question="currentQuestion"
+        :question-number="currentSubject?.currentQuestion"
+        @time-finished="submitExam"
+      />
+    </div>
 
-    <!-- RESULT MODAL -->
+    <!-- ========================================= -->
+    <!-- RESULT (dialog on desktop, sheet on mobile) -->
+    <!-- ========================================= -->
     <div
       v-if="showExamReport"
-      class="fixed inset-0 z-[200] flex h-dvh w-full items-center justify-center bg-black/40 p-3"
+      class="fixed inset-0 z-[200] flex h-dvh w-full items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
     >
       <div
-        class="flex h-[90%] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white"
+        class="flex h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:h-[90dvh] sm:rounded-3xl"
       >
-        <!-- REPORT HEADER -->
         <div
-          class="flex h-14 shrink-0 items-center justify-between bg-primary px-4 text-white sm:px-6"
+          class="flex h-14 shrink-0 items-center justify-between bg-[#0B2F6B] px-4 text-white sm:px-6"
         >
-          <h2 class="text-base font-semibold sm:text-lg">
-            Examination Report
-          </h2>
+          <h2 class="text-base font-bold">Examination Report</h2>
 
           <button
             type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20 active:scale-95"
             @click="showExamReport = false"
-            class="flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/20"
           >
-            <Icon
-              name="lucide:x"
-              class="text-2xl font-semibold text-white"
-            />
+            <Icon name="lucide:x" class="h-5 w-5" />
           </button>
         </div>
 
-        <!-- REPORT CONTENT -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <ExamSummarySection
             :score="Math.round(appState.examResult?.aggregate || 0)"
             :total="Math.round(appState.examResult?.maxAggregate || 0)"
@@ -810,151 +803,167 @@ const getQuestionClass = (question, index) => {
       </div>
     </div>
 
-    <!-- SUBJECT TABS -->
+    <!-- ========================================= -->
+    <!-- SUBJECT TABS + PROGRESS BAR -->
+    <!-- ========================================= -->
     <div
-      class="flex h-10 items-end overflow-x-auto border-b-2 border-b-primary px-3 sm:px-14"
+      class="relative z-10 shrink-0 bg-white shadow-[0_2px_10px_rgba(20,49,109,0.06)]"
     >
-      <button
-        v-for="subject in
-          appState.reviewQuestions
-            ? appState.selectedSubjectsView || []
-            : appState.selectedSubjects || []"
-        :key="subject.id"
-        @click="selectSubject(subject)"
-        :class="[
-          'flex items-end whitespace-nowrap px-4 pb-1 pt-1 text-sm font-bld sm:px-7',
-          activeSubject === subject.id
-            ? 'exam-tab text-white'
-            : 'text-primary'
-        ]"
+      <div
+        class="flex overflow-x-auto px-2 [scrollbar-width:none] sm:px-10 [&::-webkit-scrollbar]:hidden"
       >
-        {{ subject?.name || "No subject" }}
-      </button>
+        <button
+          v-for="subject in (appState.reviewQuestions
+            ? appState.selectedSubjectsView || []
+            : appState.selectedSubjects || [])"
+          :key="subject.id"
+          type="button"
+          class="relative h-11 shrink-0 whitespace-nowrap px-4 text-xs font-bold transition active:bg-blue-50 sm:px-6"
+          :class="
+            activeSubject === subject.id
+              ? 'text-[#0A6CFF]'
+              : 'text-slate-500'
+          "
+          @click="selectSubject(subject)"
+        >
+          {{ subject?.name || "No subject" }}
+
+          <span
+            v-if="activeSubject === subject.id"
+            class="absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-[#0A6CFF]"
+          ></span>
+        </button>
+      </div>
+
+      <div class="h-1 w-full bg-blue-100">
+        <div
+          class="h-full rounded-r-full bg-[#0A6CFF] transition-all duration-300"
+          :style="{ width: progressPercent + '%' }"
+        ></div>
+      </div>
     </div>
 
+    <!-- ========================================= -->
     <!-- MAIN EXAM AREA -->
-    <main
-      class="flex h-[calc(100vh-104px)] w-full flex-col-reverse overflow-hidden sm:flex-row"
-    >
+    <!-- ========================================= -->
+    <main class="flex min-h-0 flex-1 overflow-hidden">
+      <!-- DESKTOP QUESTION NAVIGATOR -->
+      <aside class="hidden shrink-0 p-3 pr-0 sm:flex sm:w-56 md:w-64 lg:w-72">
+        <div
+          class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
+        >
+          <div class="shrink-0 border-b border-blue-50 px-4 py-3">
+            <h3 class="text-xs font-bold text-slate-500">
+              Attempt: {{ attemptedCount }}/{{ totalCount }}
+            </h3>
+          </div>
 
-      <!-- DESKTOP QUESTION SIDEBAR -->
-      <section
-        class="hidden h-full overflow-y-auto border-r border-slate-200 bg-white p-4 sm:block sm:w-1/4"
-      >
-        <div class="mb-6 flex justify-between text-gray-500">
-          <h3 class="text-sm font-medium">
-            Attempt:
-            {{
-              currentSubject?.questions?.filter(
-                question => question.userAnswer
-              ).length || 0
-            }}/{{ currentSubject?.questions?.length || 0 }}
-          </h3>
-        </div>
-
-        <div class="grid grid-cols-5 gap-3 pb-10">
-          <button
-            v-for="(question, index) in currentSubject?.questions || []"
-            :key="question.id || question.sourceId || index"
-            @click="goToQuestion(index)"
-            :class="[
-              'flex h-12 w-full cursor-pointer flex-col overflow-hidden rounded-sm text-sm transition-all',
-              currentSubject?.currentQuestion === index + 1 &&
-              question.userAnswer
-                ? 'border-2 border-blue-500 bg-blue-200 text-primary'
-                : currentSubject?.currentQuestion === index + 1
-                  ? 'border-2 border-blue-500 text-blue-700'
-                  : question.userAnswer
-                    ? 'bg-blue-200 text-primary'
-                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-            ]"
+          <div
+            class="grid min-h-0 flex-1 grid-cols-5 content-start gap-2 overflow-y-auto overscroll-contain p-3"
           >
-            <!-- NUMBER -->
-            <div class="flex flex-1 items-center justify-center">
-              {{ index + 1 }}
-            </div>
-
-            <!-- TIME / RESULT -->
-            <div
-              v-if="Submitted"
-              :class="[
-                'mt-auto flex h-4 w-full items-center justify-center text-[10px] text-white',
-                getQuestionClass(question, index)
-              ]"
+            <button
+              v-for="(question, index) in currentSubject?.questions || []"
+              :key="question.id || question.sourceId || index"
+              type="button"
+              class="flex h-12 w-full cursor-pointer flex-col overflow-hidden rounded-xl text-xs font-bold transition active:scale-95"
+              :class="tileClass(question, index)"
+              @click="goToQuestion(index)"
             >
-              {{ question.timeSpent || 0 }}s
-            </div>
-          </button>
+              <div class="flex flex-1 items-center justify-center">
+                {{ index + 1 }}
+              </div>
+
+              <div
+                v-if="Submitted"
+                class="flex h-4 w-full items-center justify-center text-[10px] font-semibold"
+                :class="getQuestionClass(question, index)"
+              >
+                {{ question.timeSpent || 0 }}s
+              </div>
+            </button>
+          </div>
         </div>
-      </section>
+      </aside>
 
-      <!-- QUESTION CONTENT -->
-      <section class="flex overflow-y-auto w-full flex-1 p-2 sm:p-5">
-        <div class="flex overflow-y-auto w-full flex-1 flex-col justify-between">
-
-          <!-- QUESTION BODY -->
-          <div class="w-full flex-1 overflow-y-auto pb-4">
-            <div class=" flex justify-between">  
-              <h3 class="mb-4 text-[clamp(17px,1vw,17px)] text-gray-700">
+      <!-- QUESTION CARD -->
+      <section class="flex min-w-0 flex-1 p-3 sm:p-4">
+        <div
+          class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
+        >
+          <!-- card header -->
+          <div class="flex shrink-0 items-center justify-between gap-2 px-4 pt-4 sm:px-6">
+            <span
+              class="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#0A6CFF]"
+            >
               Question:
               {{ currentSubject?.currentQuestion || 0 }}/{{
                 currentSubject?.questions?.length || 0
               }}
-            </h3>
+            </span>
 
-              <button
+            <button
               v-if="!Submitted"
+              type="button"
+              class="block h-8 rounded-xl bg-[#0B2F6B] px-3 text-xs font-bold text-white transition active:scale-95 sm:hidden"
               @click="showSubmitModal = true"
-              class="rounded-sm bg-orange-800 h-fit sm:hidden block w-fit px-3 py-1 text-md text-white"
             >
               Submit
             </button>
 
-             <button
+            <button
               v-if="Submitted"
+              type="button"
+              class="block h-8 rounded-xl bg-[#0B2F6B] px-3 text-xs font-bold text-white transition active:scale-95 sm:hidden"
               @click="showExamReport = true"
-              class="rounded-sm sm:hidden block bg-orange-800 h-fit w-fit px-3 py-1 text-md text-white"
             >
               Result
             </button>
-            </div>
-            
+          </div>
 
-            <div class="mx-auto w-full">
-            
-              <!-- QUESTION IMAGE -->
+          <!-- scrolling question + options -->
+          <div
+            class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-3 sm:px-6 sm:pb-4"
+          >
+            <div class="mx-auto w-full max-w-3xl">
               <img
                 v-if="currentQuestion?.imageUrl"
                 :src="currentQuestion.imageUrl"
-                class="mb-3 max-h-64 max-w-full object-contain"
+                class="mb-3 max-h-64 max-w-full rounded-2xl object-contain"
                 alt="Question image"
               />
-            <div
-              v-if="currentQuestion?.section"
-              v-html="currentQuestion.section"
-              class="question-section"
-            ></div>
 
-            <div
-              v-html="
-                currentQuestion?.question ||
-                currentQuestion?.text ||
-                'Question not available'
-              "
-              class="question-content"
-            ></div>
+              <div
+                v-if="currentQuestion?.section"
+                class="question-section"
+                v-html="currentQuestion.section"
+              ></div>
 
-              <!-- QUESTION TEXT -->
-              
-             
-              <!-- OPTIONS -->
-              <div class="space-y-1">
+              <div
+                class="question-content"
+                v-html="
+                  currentQuestion?.question ||
+                  currentQuestion?.text ||
+                  'Question not available'
+                "
+              ></div>
+
+              <!-- OPTIONS (Flutter-style selectable tiles) -->
+              <div class="mt-4 flex flex-col gap-2">
                 <label
                   v-for="([key, value]) in Object.entries(
                     currentQuestion?.options || {}
                   )"
                   :key="key"
-                  class="flex cursor-pointer items-center gap-2 rounded-xl sm:p-2 p-1 transition-all hover:bg-slate-50"
+                  class="flex cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] p-3 transition active:scale-[0.99]"
+                  :class="{
+                    'border-blue-100 bg-white hover:bg-blue-50/60':
+                      optionState(key) === 'idle',
+                    'border-[#0A6CFF] bg-blue-50':
+                      optionState(key) === 'selected' ||
+                      optionState(key) === 'correct',
+                    'border-[#0B2F6B] bg-slate-100':
+                      optionState(key) === 'wrong',
+                  }"
                 >
                   <input
                     v-model="currentQuestion.userAnswer"
@@ -964,153 +973,135 @@ const getQuestionClass = (question, index) => {
                     :disabled="Submitted"
                   />
 
-                  <!-- STATUS ICON -->
-                  <Icon
-                    v-if="
-                      Submitted &&
-                      key === currentQuestion?.answer
-                    "
-                    name="lucide:check"
-                    class="h-5 w-5 text-green-600"
-                  />
-
-                  <Icon
-                    v-else-if="
-                      Submitted &&
-                      key === currentQuestion?.userAnswer &&
-                      currentQuestion?.userAnswer !==
-                        currentQuestion?.answer
-                    "
-                    name="lucide:x"
-                    class="h-5 w-5 text-red-600"
-                  />
-
-                  <!-- OPTION LETTER -->
+                  <!-- letter -->
                   <div
-                    class="flex sm:h-7 h-7 text-lg w-7 sm:w-7 shrink-0 items-center justify-center rounded-full border-2 font-medium uppercase transition-all"
-                    :class="[
-                      Submitted &&
-                      key === currentQuestion?.answer
-                        ? 'border-green-600 bg-green-600 text-white'
-                        : Submitted &&
-                            key === currentQuestion?.userAnswer &&
-                            currentQuestion?.userAnswer !==
-                              currentQuestion?.answer
-                          ? 'border-red-600 bg-red-600 text-white'
-                          : currentQuestion?.userAnswer === key
-                            ? 'border-primary bg-primary text-white'
-                            : 'border-slate-300 text-slate-600'
-                    ]"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase transition"
+                    :class="{
+                      'border-2 border-blue-200 bg-white text-slate-500':
+                        optionState(key) === 'idle',
+                      'bg-[#0A6CFF] text-white':
+                        optionState(key) === 'selected' ||
+                        optionState(key) === 'correct',
+                      'bg-[#0B2F6B] text-white':
+                        optionState(key) === 'wrong',
+                    }"
                   >
                     {{ key }}
                   </div>
 
-                  <!-- OPTION TEXT -->
+                  <!-- text -->
                   <span
-                    class="flex-1 text-lg  font-normal text-slate-800 sm:text-[17px]"
-                    :class="[
-                      Submitted &&
-                      key === currentQuestion?.answer
-                        ? 'font-bold text-green-700'
-                        : Submitted &&
-                            key === currentQuestion?.userAnswer &&
-                            currentQuestion?.userAnswer !==
-                              currentQuestion?.answer
-                          ? 'font-bold text-red-700'
-                          : ''
-                    ]"
+                    class="min-w-0 flex-1 break-words text-[15px] leading-snug text-[#201F22] sm:text-base"
+                    :class="
+                      optionState(key) === 'correct' ||
+                      optionState(key) === 'wrong'
+                        ? 'font-bold'
+                        : 'font-normal'
+                    "
                   >
                     {{ value }}
                   </span>
+
+                  <!-- status -->
+                  <Icon
+                    v-if="optionState(key) === 'correct'"
+                    name="lucide:check-circle-2"
+                    class="h-5 w-5 shrink-0 text-[#0A6CFF]"
+                  />
+
+                  <Icon
+                    v-else-if="optionState(key) === 'wrong'"
+                    name="lucide:x-circle"
+                    class="h-5 w-5 shrink-0 text-[#0B2F6B]"
+                  />
                 </label>
               </div>
 
               <!-- EXPLANATION -->
               <div
                 v-if="Submitted"
-                class="mt-5 text-sm border-t border-slate-200 pt-4"
+                class="mt-5 rounded-2xl bg-blue-50 p-3 text-sm"
               >
-                            <QuestionExplanation
-                v-if="currentQuestion"
-                :question="currentQuestion"
-              />
-
-                
+                <QuestionExplanation
+                  v-if="currentQuestion"
+                  :question="currentQuestion"
+                />
               </div>
             </div>
           </div>
 
-          <!-- BOTTOM NAVIGATION -->
+          <!-- BOTTOM ACTION BAR -->
           <div
-            class="flex w-full items-center justify-between gap-2 border-t border-slate-100 bg-white pt-3"
+            class="flex shrink-0 items-center justify-between gap-2 border-t border-blue-50 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 sm:px-6 sm:pb-3"
           >
             <div class="flex gap-2">
-              <!-- PREVIOUS -->
               <button
-                @click="previous"
+                type="button"
+                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-blue-50 px-3 text-sm font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4"
                 :disabled="currentSubject?.currentQuestion <= 1"
-                class="flex items-center gap-1 rounded-sm bg-primary px-2 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                @click="previous"
               >
                 <Icon name="lucide:chevron-left" class="h-5 w-5" />
                 <span class="hidden sm:inline">Previous</span>
               </button>
 
-              <!-- NEXT -->
               <button
-                @click="next"
+                type="button"
+                class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-[#0A6CFF] px-3 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-4"
                 :disabled="
                   currentSubject?.currentQuestion >=
                   currentSubject?.questions?.length
                 "
-                class="flex items-center gap-1 rounded-sm bg-green-700 px-2 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                @click="next"
               >
                 <span class="hidden sm:inline">Next</span>
                 <Icon name="lucide:chevron-right" class="h-5 w-5" />
               </button>
+            </div>
 
-              <!-- RESULT -->
+            <div class="hidden gap-2 sm:flex">
               <button
                 v-if="Submitted"
+                type="button"
+                class="h-11 rounded-2xl bg-[#0B2F6B] px-4 text-sm font-bold text-white transition hover:brightness-125 active:scale-95"
                 @click="showExamReport = true"
-                class="rounded-sm sm:block hidden bg-orange-800 px-3 py-2 text-sm text-white"
               >
                 Result
               </button>
-            </div>
 
-            <!-- SUBMIT -->
-            <button
-              v-if="!Submitted"
-              @click="showSubmitModal = true"
-              class="rounded-sm hidden sm:block bg-orange-800 px-3 py-2 text-sm text-white"
-            >
-              Submit
-            </button>
+              <button
+                v-if="!Submitted"
+                type="button"
+                class="h-11 rounded-2xl bg-[#0B2F6B] px-4 text-sm font-bold text-white transition hover:brightness-125 active:scale-95"
+                @click="showSubmitModal = true"
+              >
+                Submit
+              </button>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
-    <!-- MOBILE FLOATING QUESTIONS BUTTON -->
+    <!-- MOBILE FLOATING "QUESTIONS" BUTTON (extended FAB) -->
     <button
       v-if="!showMobileQuestionList"
+      type="button"
+      class="fixed bottom-[calc(env(safe-area-inset-bottom)+22px)] right-4 z-[110] flex h-12 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-4 text-white shadow-[0_8px_20px_rgba(10,108,255,0.45)] transition active:scale-95 sm:hidden"
       @click="openMobileQuestionList"
-      class="fixed bottom-5 right-4 z-[110] w-fit h-fit flex items-center gap-2 rounded-full bg-primary px-4 py-2 w-fit text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 sm:hidden"
     >
-      <Icon name="lucide:grid-3x3" class="h-3 w-3" />
+      <Icon name="lucide:grid-3x3" class="h-4 w-4" />
 
-      <span class=" text-xs">Questions</span>
+      <span class="text-xs font-bold">Questions</span>
 
-      <span
-        class="rounded-full bg-white/20 px-2 py-0.5 text-xs"
-      >
+      <span class="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">
         {{ currentSubject?.currentQuestion || 0 }}/{{
           currentSubject?.questions?.length || 0
         }}
       </span>
     </button>
 
-    <!-- MOBILE BOTTOM SHEET OVERLAY -->
+    <!-- MOBILE SHEET OVERLAY -->
     <Transition name="question-overlay">
       <div
         v-if="showMobileQuestionList"
@@ -1119,23 +1110,19 @@ const getQuestionClass = (question, index) => {
       ></div>
     </Transition>
 
-    <!-- MOBILE OPay-STYLE BOTTOM SHEET -->
+    <!-- MOBILE BOTTOM SHEET -->
     <Transition name="question-sheet">
       <section
         v-if="showMobileQuestionList"
-        class="fixed bottom-0 left-0 right-0 pb- z-[130] max-h-[70vh] overflow-hdden rounded-t-3xl bg-white shadow-2xl sm:hidden"
+        class="fixed inset-x-0 bottom-0 z-[130] flex max-h-[80dvh] flex-col rounded-t-[28px] bg-white shadow-2xl sm:hidden"
       >
-        <!-- SHEET HANDLE -->
-        <div class="flex justify-center pt-2">
-          <div class="h-1.5 w-12 rounded-full bg-slate-300"></div>
+        <div class="flex shrink-0 justify-center pt-2">
+          <div class="h-1.5 w-12 rounded-full bg-slate-200"></div>
         </div>
 
-        <!-- SHEET HEADER -->
-        <div
-          class="flex items-center justify-between border-b border-slate-100 px-5 py-2"
-        >
+        <div class="flex shrink-0 items-center justify-between px-5 py-3">
           <div>
-            <h2 class="text-sm font-bold text-slate-800">
+            <h2 class="text-sm font-bold text-[#0B2F6B]">
               Question Navigator
             </h2>
 
@@ -1145,134 +1132,125 @@ const getQuestionClass = (question, index) => {
           </div>
 
           <button
+            type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition active:bg-slate-200"
             @click="closeMobileQuestionList"
-            class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
           >
             <Icon name="lucide:x" class="h-5 w-5" />
           </button>
         </div>
 
-        <!-- ATTEMPT SUMMARY -->
-        <div
-          class="mx-2 mt-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-        >
-          <span class="text-sm text-slate-500">
-            Attempted
-          </span>
+        <!-- attempted card -->
+        <div class="mx-4 shrink-0 rounded-2xl bg-blue-50 px-4 py-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-500">Attempted</span>
 
-          <span class="text-sm font-bold text-primary">
-            {{
-              currentSubject?.questions?.filter(
-                question => question.userAnswer
-              ).length || 0
-            }}
-            /
-            {{ currentSubject?.questions?.length || 0 }}
-          </span>
-        </div>
+            <span class="text-sm font-bold text-[#0A6CFF]">
+              {{ attemptedCount }} / {{ totalCount }}
+            </span>
+          </div>
 
-        <!-- QUESTION GRID -->
-        <div class="max-h-[55vh] overflow-y-auto pb-16 2 px-5 py-5">
-          <div class="grid grid-cols-5 gap-3">
-           <button
-            v-for="(question, index) in currentSubject?.questions || []"
-            :key="question.id || question.sourceId || index"
-            @click="goToQuestion(index)"
-            :class="[
-              'flex h-12 w-full cursor-pointer flex-col overflow-hidden rounded-sm text-sm transition-all',
-              currentSubject?.currentQuestion === index + 1 &&
-              question.userAnswer
-                ? 'border-2 border-blue-500 bg-blue-200 text-primary'
-                : currentSubject?.currentQuestion === index + 1
-                  ? 'border-2 border-blue-500 text-blue-700'
-                  : question.userAnswer
-                    ? 'bg-blue-200 text-primary'
-                    : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-            ]"
-          >
-            <!-- NUMBER -->
-            <div class="flex flex-1 items-center justify-center">
-              {{ index + 1 }}
-            </div>
-
-            <!-- TIME / RESULT -->
+          <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-blue-100">
             <div
-              v-if="Submitted"
-              :class="[
-                'mt-auto flex h-4 w-full items-center justify-center text-[10px] text-white',
-                getQuestionClass(question, index)
-              ]"
-            >
-              {{ question.timeSpent || 0 }}s
-            </div>
-          </button>
+              class="h-full rounded-full bg-[#0A6CFF] transition-all duration-300"
+              :style="{ width: progressPercent + '%' }"
+            ></div>
           </div>
         </div>
-        <div class=" h-60 w-full"></div>
-        <!-- SHEET FOOTER -->
+
+        <!-- grid -->
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+          <div class="grid grid-cols-5 gap-2.5">
+            <button
+              v-for="(question, index) in currentSubject?.questions || []"
+              :key="question.id || question.sourceId || index"
+              type="button"
+              class="flex h-12 w-full cursor-pointer flex-col overflow-hidden rounded-xl text-xs font-bold transition active:scale-95"
+              :class="tileClass(question, index)"
+              @click="goToQuestion(index)"
+            >
+              <div class="flex flex-1 items-center justify-center">
+                {{ index + 1 }}
+              </div>
+
+              <div
+                v-if="Submitted"
+                class="flex h-4 w-full items-center justify-center text-[10px] font-semibold"
+                :class="getQuestionClass(question, index)"
+              >
+                {{ question.timeSpent || 0 }}s
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- footer -->
         <div
-          class="border-t border-slate-100 bg-white px-5 py-4"
+          class="shrink-0 border-t border-blue-50 bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
         >
           <button
+            type="button"
+            class="flex h-12 w-full items-center justify-center rounded-2xl bg-[#0A6CFF] text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition active:scale-[0.98]"
             @click="closeMobileQuestionList"
-            class="flex w-full mb-40 items-center justify-center rounded-xl bg-primary py-3 font-semibold text-white transition active:scale-[0.98]"
           >
             Continue Exam
           </button>
         </div>
       </section>
     </Transition>
-
   </div>
 </template>
-<style>
-.exam-tab{
-    
 
-    background-image:url("~/assets/images/icons/tab1.svg"); 
-    background-repeat:no-repeat;
-    background-size:100% 100%;
-    background-position:center;
-
-    border:none;
-    
-   
+<style scoped>
+/* native-app feel */
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* =========================================================
-   QUESTION CONTENT
+   TYPE SCALE (one scale for the whole page)
+   10px  captions on tiles
+   12px  labels, tabs, chips, small buttons
+   14px  action buttons, explanation
+   15px  reading text on phones   (question + options)
+   16px  reading text on desktop  (question + options)
    ========================================================= */
 
 .question-section,
 .question-content {
   width: 100%;
   max-width: 100%;
-  color: #24304a;
+  color: #0b2f6b;
   font-family: inherit;
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.65;
   overflow-wrap: anywhere;
-  word-break: normal;
 }
 
-/* Section / instruction */
-.question-section {
-  margin-bottom: 10px;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.7;
-}
-/* Main question */
 .question-content {
-  margin-bottom: 8px;
-  font-size: 17px;
+  font-weight: 600;
+}
+
+/* passage / instruction above the question */
+.question-section {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f3f8ff;
   font-weight: 500;
-  line-height: 1.7;
+}
+
+@media (min-width: 640px) {
+  .question-section,
+  .question-content {
+    font-size: 16px;
+    line-height: 1.7;
+  }
 }
 
 /* =========================================================
-   HTML GENERATED BY v-html
+   HTML COMING FROM THE DATABASE (v-html)
+   Scoped styles need :deep() to reach these elements.
    ========================================================= */
 
 .question-section :deep(*),
@@ -1280,7 +1258,6 @@ const getQuestionClass = (question, index) => {
   max-width: 100%;
 }
 
-/* Paragraphs */
 .question-section :deep(p),
 .question-content :deep(p) {
   margin: 0 0 8px;
@@ -1288,13 +1265,11 @@ const getQuestionClass = (question, index) => {
   line-height: inherit;
 }
 
-/* Last paragraph should not create extra space */
 .question-section :deep(p:last-child),
 .question-content :deep(p:last-child) {
   margin-bottom: 0;
 }
 
-/* Bold text */
 .question-section :deep(strong),
 .question-section :deep(b),
 .question-content :deep(strong),
@@ -1302,7 +1277,6 @@ const getQuestionClass = (question, index) => {
   font-weight: 700;
 }
 
-/* Italic */
 .question-section :deep(em),
 .question-section :deep(i),
 .question-content :deep(em),
@@ -1310,7 +1284,6 @@ const getQuestionClass = (question, index) => {
   font-style: italic;
 }
 
-/* Headings inside question HTML */
 .question-section :deep(h1),
 .question-section :deep(h2),
 .question-section :deep(h3),
@@ -1320,15 +1293,11 @@ const getQuestionClass = (question, index) => {
 .question-content :deep(h3),
 .question-content :deep(h4) {
   margin: 8px 0;
-  color: #24304a;
+  color: #0b2f6b;
   font-size: inherit;
   font-weight: 700;
   line-height: 1.5;
 }
-
-/* =========================================================
-   LISTS
-   ========================================================= */
 
 .question-section :deep(ul),
 .question-content :deep(ul) {
@@ -1350,10 +1319,6 @@ const getQuestionClass = (question, index) => {
   padding-left: 2px;
 }
 
-/* =========================================================
-   IMAGES
-   ========================================================= */
-
 .question-section :deep(img),
 .question-content :deep(img) {
   display: block;
@@ -1361,20 +1326,18 @@ const getQuestionClass = (question, index) => {
   max-width: 100%;
   height: auto;
   margin: 10px auto;
+  border-radius: 12px;
   object-fit: contain;
 }
 
-/* =========================================================
-   TABLES
-   ========================================================= */
-
 .question-section :deep(table),
 .question-content :deep(table) {
+  display: block;
   width: 100%;
   max-width: 100%;
   margin: 10px 0;
-  border-collapse: collapse;
   overflow-x: auto;
+  border-collapse: collapse;
   font-size: 14px;
 }
 
@@ -1383,20 +1346,16 @@ const getQuestionClass = (question, index) => {
 .question-content :deep(th),
 .question-content :deep(td) {
   padding: 7px 9px;
-  border: 1px solid #d9dde5;
+  border: 1px solid #dbeafe;
   text-align: left;
   vertical-align: top;
 }
 
 .question-section :deep(th),
 .question-content :deep(th) {
+  background: #eff6ff;
   font-weight: 700;
-  background: #f6f3ec;
 }
-
-/* =========================================================
-   SUPERSCRIPT / SUBSCRIPT
-   ========================================================= */
 
 .question-section :deep(sup),
 .question-content :deep(sup) {
@@ -1410,13 +1369,9 @@ const getQuestionClass = (question, index) => {
   vertical-align: sub;
 }
 
-/* =========================================================
-   CODE / PRE
-   ========================================================= */
-
 .question-section :deep(code),
 .question-content :deep(code) {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 0.9em;
   overflow-wrap: anywhere;
 }
@@ -1427,56 +1382,38 @@ const getQuestionClass = (question, index) => {
   margin: 10px 0;
   padding: 10px;
   overflow-x: auto;
-  border-radius: 8px;
-  background: #f4f4f4;
+  border-radius: 12px;
+  background: #eff6ff;
 }
 
 /* =========================================================
-   MOBILE
+   MOBILE SHEET ANIMATIONS
    ========================================================= */
 
-@media (max-width: 640px) {
-  .question-section {
-    font-size: 16px;
-    line-height: 1.55;
-  }
-
-  .question-content {
-    font-size: 17px;
-    line-height: 1.65;
-  }
-
-  .question-section :deep(p),
-  .question-content :deep(p) {
-    margin-bottom: 6px;
-  }
-
-  .question-section :deep(table),
-  .question-content :deep(table) {
-    display: block;
-    overflow-x: auto;
-    white-space: normal;
-  }
-
-  .question-section :deep(img),
-  .question-content :deep(img) {
-    max-width: 100%;
-    height: auto;
-  }
+.question-overlay-enter-active,
+.question-overlay-leave-active {
+  transition: opacity 0.2s ease;
 }
 
-/* =========================================================
-   LARGER SCREENS
-   ========================================================= */
+.question-overlay-enter-from,
+.question-overlay-leave-to {
+  opacity: 0;
+}
 
-@media (min-width: 640px) {
-  .question-section {
-    font-size: 16px;
-  }
+.question-sheet-enter-active,
+.question-sheet-leave-active {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 
-  .question-content {
-    font-size: 16px;
-    line-height: 1.7;
+.question-sheet-enter-from,
+.question-sheet-leave-to {
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
   }
 }
 </style>

@@ -4,7 +4,7 @@
          overflow-hidden overscroll-none bg-[#F3F7FE] sm:flex "
      style="background-image: url('./Image/background.png')"
   >
-  <div class="bg-white/80">
+ <div class="relative flex h-full min-h-0 w-full flex-col bg-white/80 sm:flex-row">
  
     <!-- Desktop / tablet background image (hidden on phones) -->
     <div
@@ -52,14 +52,14 @@
             <header
               class="shrink-0 b text-ite"
             >
-              <div class="flex h-12 items-center gap-1 px-4">
+              <div class="flex h-12 items-center gap-1 px-2">
                 <button
                   type="button"
                   class="flex h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
                   aria-label="Open menu"
                   @click="menuOpen = true"
                 >
-                 <img src="/images/logo.svg"   class=" w"  >
+                 <img src="/images/logos.svg"   class=" w"  >
                 </button>
 
                 <div class="flex min-w-0 flex-1 items-center gap-2.5">
@@ -342,7 +342,7 @@
           <!-- DICTIONARY -->
           <div
             v-else-if="appState.currentPage === 'DICTIONARY'"
-            class="min-h-full w-full max-w-full min-w-0 overflow-x-hidden"
+            class="   h-dvh w-full max-w-full min-w-0 overflow-x-hidden"
           >
             <DictionarySearch @gohome="closeBook" />
           </div>
@@ -437,7 +437,7 @@
               type="button"
               :class="[
                 'relative flex flex-col items-center justify-center gap-0. text-[12px] font-medium transition-colors',
-                activeTab === tab.key ? 'text-primary' : 'text-[#5B6E8F]',
+                activeTab === tab.key ? 'text-[#0B63F6]' : 'text-[#5B6E8F]',
               ]"
               @click="goToTab(tab)"
             >

@@ -1,7 +1,35 @@
 <template>
   <div
-    class="flex h-full  sm:pt-0 min-h-0 w-full flex-col overflow-hidden bg-[#f8f9fc] text-[#201f22] font-['Inter',system-ui,sans-serif]"
+    class="flex h-full  sm:pt-0 min-h-0 w-full flex-col overflow-hidden sm:bg-white bg-[#f0f3fb] text-[#201f22] font-['Roboto',system-ui,sans-serif]"
   >
+
+            <header
+              class="shrink-0 sm:hidden block b text-ite"
+            >
+              <div class="flex h-12 items-center gap-1 px-2">
+                <button
+                  type="button"
+                  class="flex h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
+                  aria-label="Open menu"
+                  @click="menuOpen = true"
+                >
+                 <img src="/images/logos.svg"   class="  "  >
+                </button>
+
+                <div class="flex min-w-0 flex-1 items-center gap-2.5">
+                  
+                  <span class="truncate text-[15px] font-bold tracking-tight">
+                    Exam Preparation
+                  </span>
+                </div>
+
+               <button type="button" class="  text-gray-700" @click="goHome" aria-label="Go home">
+                <Icon name="lucide:house" class=" text-xl" />
+              </button>
+
+               
+              </div>
+            </header>
     <!-- MAIN CONTENT -->
     <main class="min-h-0 flex-1 overflow-y-hidden  p-2 pb-24 pt-2 sm:px-3">
       <!-- HERO BANNER -->
@@ -9,7 +37,7 @@
         class="relative mb-3 overflow-hidden flex justify-between rounded-sm bg-primary p-3 text-white shadow-sm"
       >
         <div class="relative z-10 max-w-[85%]">
-          <div class="mb-2 flex items-center gap-1.5">
+          <div class="sm:mb-2 mb-1 flex items-center gap-1.5">
             <div
               class="flex h-6 w-6 items-center justify-center rounded-sm bg-white/10"
             >
@@ -17,19 +45,19 @@
             </div>
 
             <span
-              class="text-[9px] font-semibold uppercase tracking-wide text-indigo-300"
+              class="sm:text-[10px] text-[9px] font-semibold uppercase tracking-wide text-indigo-300"
             >
               Exam Preparation
             </span>
           </div>
 
           <h1
-            class="font-['Fraunces',Georgia,serif] text-xl font-semibold leading-tight sm:text-2xl"
+            class="  text-lg font-semibold leading-tight sm:text-2xl"
           >
-            Ready to Excel?
+            Choose your subjects,
           </h1>
 
-          <p class="mt-1 text-[11px] leading-relaxed text-indigo-200">
+          <p class="sm:mt-1 mt-0 text-[9px] sm:text-[11px] leading-relaxed text-indigo-200">
             Choose your subjects, customize your practice, and prepare for
             success.
           </p>
@@ -37,14 +65,14 @@
           <button
             type="button"
             @click="openSubjectModal"
-            class="mt-3 flex items-center gap-1.5 rounded-sm bg-white px-3 py-2 text-[11px] font-semibold text-[#1e1b4b] shadow-sm transition active:scale-95"
+            class="sm:mt-3 mt-1 flex items-center sm:gap-1.5 rounded-sm bg-white sm:px-3 px-2 py-1 sm:py-2 text-[11px] font-semibold text-[#1e1b4b] shadow-sm transition active:scale-95"
           >
-            <Icon name="lucide:plus" class="h-3.5 w-3.5" />
+            <Icon name="lucide:plus" class="sm:h-3.5 h-2 w-2 sm:w-3.5" />
             Select Subjects
           </button>
         </div>
         <div>
-           <button type="button" class="ds-header__home" @click="goHome" aria-label="Go home">
+           <button type="button" class=" sm:block hidden ds-header__home" @click="goHome" aria-label="Go home">
         <Icon name="lucide:house" class=" text-xl" />
       </button>
         </div>
@@ -67,25 +95,58 @@
 
       <!-- QUICK SUMMARY -->
       <section class="mb-3 grid grid-cols-2 gap-2">
-        <div class="rounded-sm border border-gray-200 bg-white p-2.5 shadow-sm">
-          <div class="mb-1.5 flex items-center justify-between">
+      
+        <div class="rounded-lg border flex justify-between    gap-2 border-gray-200 bg-indigo-50  sm:p-2.5 p-1.5 shadow-sm">
+           <div class="flex  gap-2">
             <div
-              class="flex h-6 w-6 items-center justify-center rounded-sm bg-indigo-50 text-indigo-600"
+              class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-sm bg-indigo-100 text-indigo-600"
             >
-              <Icon name="lucide:layers-3" class="h-3.5 w-3.5" />
+              <Icon name="lucide:layers-3" class="sm:h-8 sm:w-8 w-5 h-5" />
             </div>
 
-            <span class="text-[9px] font-medium text-gray-400"> Selected </span>
-          </div>
-
-          <p class="text-xl font-semibold leading-none text-gray-900">
+         
+          <div class="  space-y-0.5">
+            <span class="text-[10px] font-semibold text-indigo-900"> Selected </span>
+            <p class="text-lg font-bold leading-none text-gray-900">
             {{ selectedSubjects.length }}
           </p>
-
-          <p class="mt-1 text-[11px] text-gray-500">Subjects</p>
+            <p class="text-[10px] font-semibold text-indigo-900">Subjects</p>
+          </div>
+         </div>
+          <div class="flex  place-content-end  items-center  justify-end rounded-sm bg-indigo-50 ">
+              <Icon name="lucide:chevron-right" class="sm: w-4 h-4" />
+          </div>
+    
+        
         </div>
 
-        <div class="rounded-sm border border-gray-200 bg-white p-2.5 shadow-sm">
+        <div class="rounded-lg border  flex justify-between   gap-2 border-gray-200 bg-emerald-50  sm:p-2.5 p-1.5 shadow-sm">
+          <div class="flex  gap-2">
+            <div
+              class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-sm bg-emerald-100 text-emerald-600"
+            >
+              <Icon name="lucide:file-text" class="sm:h-8 sm:w-8 w-5 h-5" />
+            </div>
+
+         
+            <div class="  space-y-0.5">
+              <span class="text-[10px] font-semibold text-indigo-900"> Selected </span>
+              <p class="text-lg font-bold leading-none text-gray-900">
+              {{ totalQuestions }}
+            </p>
+              <p class="text-[10px] font-semibold text-indigo-900">Questions</p>
+            </div>
+          </div>
+          <div class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-sm  ">
+              <Icon name="lucide:chevron-right" class="w-4 h-4" />
+          </div>
+    
+        
+        </div>
+
+
+
+        <div class="rounded-lg hidden border border-gray-200 bg-white p-2.5 shadow-sm">
           <div class="mb-1.5 flex items-center justify-between">
             <div
               class="flex h-6 w-6 items-center justify-center rounded-sm bg-emerald-50 text-emerald-600"
@@ -93,7 +154,7 @@
               <Icon name="lucide:file-text" class="h-3.5 w-3.5" />
             </div>
 
-            <span class="text-[9px] font-medium text-gray-400"> Total </span>
+            <span class="text-[10px] font-medium text-gray-400"> Total </span>
           </div>
 
           <p class="text-xl font-semibold leading-none text-gray-900">
@@ -105,30 +166,7 @@
       </section>
 
       <!-- SEARCH AND FILTER -->
-      <section class="mb-3 hidden  items-center gap-1.5">
-        <div class="relative min-w-0 flex-1">
-          <Icon
-            name="lucide:search"
-            class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400"
-          />
-
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search selected subjects..."
-            class="w-full rounded-sm border border-gray-200 bg-white py-2 pl-8 pr-2 text-[11px] text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
-          />
-        </div>
-
-        <button
-          type="button"
-          @click="openSubjectModal"
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-gray-200 bg-white text-gray-600 shadow-sm transition active:scale-95"
-          title="Manage subjects"
-        >
-          <Icon name="lucide:sliders-horizontal" class="h-3.5 w-3.5" />
-        </button>
-      </section>
+     
 
       <!-- CATEGORY TABS -->
     
@@ -146,7 +184,7 @@
         <button
           type="button"
           @click="openSubjectModal"
-          class="text-[11px] font-semibold text-indigo-600"
+          class="text-[13px] font-semibold text-indigo-600"
         >
           + Add
         </button>
@@ -186,7 +224,7 @@
           class="overflow-hidden rounded-sm border border-gray-200 bg-white shadow-sm transition"
         >
           <!-- CARD TOP -->
-          <div class="flex items-start gap-2.5 p-2.5">
+          <div class="flex items-center gap-2.5 p-2.5">
             <div
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm"
               :class="getSubjectColor(subject.id).bg"
@@ -199,7 +237,7 @@
             </div>
 
             <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-1.5">
+              <div class="flex bg-pr items-start justify-between gap-1.5">
                 <div class="min-w-0">
                   <h3 class="truncate text-sm font-semibold text-gray-900">
                     {{ subject.name }}
@@ -218,7 +256,7 @@
                 </button>
               </div>
 
-              <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <div class="mt-1.5 hidden flex-wrap items-center gap-1.5">
                 <span
                   class="flex items-center gap-1 rounded-sm bg-emerald-50 px-1.5 py-1 text-[10px] font-medium text-emerald-700"
                 >
@@ -242,7 +280,7 @@
               <!-- YEAR -->
               <div class="min-w-0">
                 <label
-                  class="mb-1 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-gray-400"
+                  class="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400"
                 >
                   <Icon name="lucide:calendar-days" class="h-3 w-3" />
                   Year
@@ -274,7 +312,7 @@
               <!-- QUESTION COUNT -->
               <div class="min-w-0">
                 <label
-                  class="mb-1 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-gray-400"
+                  class="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400"
                 >
                   <Icon name="lucide:list-ordered" class="h-3 w-3" />
                   Questions
@@ -306,7 +344,7 @@
             <button
               type="button"
               @click="openTopicModal(subject)"
-              class="mt-2 flex w-full items-center justify-between rounded-sm border border-gray-200 bg-white px-2 py-2 text-left transition active:bg-gray-50"
+              class="mt-2  hidden w-full items-center justify-between rounded-sm border border-gray-200 bg-white px-2 py-2 text-left transition active:bg-gray-50"
             >
               <div class="flex min-w-0 items-center gap-2">
                 <div
@@ -317,7 +355,7 @@
 
                 <div class="min-w-0">
                   <p
-                    class="text-[9px] font-semibold uppercase tracking-wide text-gray-400"
+                    class="text-[10px] font-semibold uppercase tracking-wide text-gray-400"
                   >
                     Topics
                   </p>
@@ -331,7 +369,7 @@
               </div>
 
               <div class="flex items-center gap-1 text-indigo-500">
-                <span class="text-[9px] font-semibold"> Edit </span>
+                <span class="text-[10px] font-semibold"> Edit </span>
 
                 <Icon name="lucide:chevron-right" class="h-3.5 w-3.5" />
               </div>
@@ -356,7 +394,7 @@
               Student Profile
             </h3>
 
-            <p class="text-[9px] text-gray-400">
+            <p class="text-[10px] text-gray-400">
               Save your name for your practice session.
             </p>
           </div>
@@ -493,7 +531,7 @@
                   Shuffle Questions
                 </p>
 
-                <p class="text-[9px] text-gray-400">Randomize question order</p>
+                <p class="text-[10px] text-gray-400">Randomize question order</p>
               </div>
             </div>
 
@@ -520,7 +558,7 @@
                   Shuffle Options
                 </p>
 
-                <p class="text-[9px] text-gray-400">Randomize answer choices</p>
+                <p class="text-[10px] text-gray-400">Randomize answer choices</p>
               </div>
             </div>
 
@@ -532,10 +570,10 @@
           </label>
         </div>
       </section>
-    </main>
 
-    <!-- FIXED BOTTOM ACTION BAR -->
-    <div
+
+
+       <div
       class="shrink-0 border-t border-gray-200 bg-white px-2.5 pb-2.5 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.03)] sm:px-3"
     >
       <div class="flex items-center gap-1.5">
@@ -570,9 +608,14 @@
             class="h-3.5 w-3.5 shrink-0"
           />
         </button>
+       
       </div>
     </div>
 
+    </main>
+
+    <!-- FIXED BOTTOM ACTION BAR -->
+   
     <!-- MODALS -->
     <Teleport to="body">
       <!-- INSTRUCTIONS MODAL -->
@@ -1164,7 +1207,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap");
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

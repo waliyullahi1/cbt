@@ -5,20 +5,58 @@
     <!-- ================================================= -->
     <!-- HEADER -->
     <!-- ================================================= -->
+           <div
+              class="relative sm:hidden block z-10 shrink-0 sm:bg-[#0B2F6B]  bg-transparent  sm:text-white text-[#5B6E8F] sm:shadow-[0_4px_16px_rgba(11,47,107,0.25)]  shadow-[0_1px_2px_rgba(36 sm:backdrop-blur-[4px] sm:backdrop-saturate-[180%]"
+            >
+              <div class="flex min-h-12 items-center justify-between gap-3 sm:px-4  px-2 py-2">
+                <div class="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  class="flex h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
+                  aria-label="Open menu"
+                  @click="menuOpen = true"
+                >
+                  <img src="/images/logos.svg"   class=" w"  >
+                </button>
+                  <span
+                    class="sm:flex hidden  sm:h-10 sm:w-10 w-8 h-8 shrink-0 items-center justify-center rounded-xl bg-[#0A6CFF] shadow-[0_4px_10px_rgba(10,108,255,0.45)]"
+                  >
+                    <Icon name="lucide:book-marked" class="sm:h-5 h-3 w-3 sm:w-5" />
+                  </span>
 
+                  <div class="min-w-0">
+                    <h1 class="truncate  text-[15px] font-bold leading-tight tracking-tight">
+                      Classroom
+                    </h1>
+                    <p class="mt-0.5 truncate font-bold  text-[11px]  leading-tight  sm:text-white/65">
+                     Learn . Practice . Succeed
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="flex sm:h-11 h-9 w-9 sm:w-11 shrink-0 items-center justify-center rounded-full sm:bg-[#0A6CFF] bg-white sm:shadow-[0_4px_10px_rgba(10,108,255,0.45)] shadow-[0_1px_2px_rgba(36,48,74,0.04)] transition active:scale-95"
+                  aria-label="Go home"
+                  @click="goHome"
+                >
+                  <Icon name="lucide:house" class="h-5  w-5" />
+                </button>
+              </div>
+            </div>
     <header
-      class="flex flex-col gap-3 bg-primary px-4 py-3 text-white shadow-md sm:px-6"
+      class="flex flex-col  gap-3 sm:bg-primary  bg-white s4 px-2 py-3 sm:text-white text-black sm:shadow-md sm:px-6"
     >
       <!-- title row -->
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
+        <div class=" hidden sm:flex items-center gap-3">
           <div
             class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10"
           >
             <Icon name="lucide:school" class="h-5 w-5" />
           </div>
           <h1
-            class="font-['Fraunces',Georgia,serif] text-base font-semibold sm:text-lg"
+            class="  text-base font-semibold sm:text-lg"
           >
             Classroom
           </h1>
@@ -26,7 +64,7 @@
 
         <button
           type="button"
-          class="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/10"
+          class="sm:flex hidden h-9 w-9 items-center justify-center rounded-lg transition hover:bg-white/10"
           @click="goHome"
         >
           <Icon name="lucide:house" class="h-5 w-5" />
@@ -34,15 +72,52 @@
       </div>
 
       <!-- action row -->
-      <div class="flex flex-wrap items-center gap-2">
+
+       <div
+        
+          class="m flex w-full sm:hidden bg-[#0A6CFF]/10 rounded-lg px-1 py-2 items-center justify-between gap-3 px-1"
+        >
+          <div class="flex min-w-0  items-center gap-3">
+          <div class="  h-10 w-10  flex  justify-center items-center bg-[#0A6CFF]/20 rounded-full">
+          <Icon name="lucide:user-round" class="  text-xl font-bold shrink-0 text-[#0B2F6B]" />
+          </div>
+            
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold tracking-widest text-[#0A6CFF] sm:text-[10px]">
+               Welcome back, 
+              </p>
+              <input
+            v-model="appState.currentsuser"
+            list="classroom-users"
+            placeholder="Select user"
+            class="w-32   sm:bg-transparent   text-sm font-medium sm:text-white text-black outline-none p sm:w-40"
+          />
+          <datalist id="classroom-users">
+            <option v-for="u in appState.users || []" :key="u" :value="u" />
+          </datalist>
+            </div>
+          </div>
+
+          <button
+          type="button"
+          class="flex items-center whitespace-nowrap gap-1.5 sm:bg-none bg-red-400 rounded-full bg-gold px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          @click="showAddUser = true"
+        >
+          <Icon name="lucide:user-plus" class="h-3.5 w-3.5" />
+          Add User
+        </button>
+        </div>
+      <div class="sm:flex  grid grid-cols-2 flex-wrap justify-between items-center gap-2">
+        
+      
         <!-- user select -->
-        <div class="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5">
-          <Icon name="lucide:user-round" class="h-4 w-4 text-white/70" />
+        <div class="flex sm:block hidden items-center gap-2 rounded-lg sm:bg-white/10   bg-slate-200 px-3 py-1.5">
+          <Icon name="lucide:user-round" class="h-4 w-4 text-black sm:text-white/70" />
           <input
             v-model="appState.currentsuser"
             list="classroom-users"
             placeholder="Select user"
-            class="w-32 bg-transparent text-sm font-medium text-white outline-none placeholder:text-white/50 sm:w-40"
+            class="w-32   sm:bg-transparent   text-sm font-medium sm:text-white text-black outline-none placeholder:text-white/50 sm:w-40"
           />
           <datalist id="classroom-users">
             <option v-for="u in appState.users || []" :key="u" :value="u" />
@@ -51,7 +126,7 @@
 
         <button
           type="button"
-          class="flex items-center gap-1.5 rounded-full bg-gold px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          class="sm:flex hidden  items-center gap-1.5 sm:bg-none bg-amber-900 rounded-full bg-gold px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
           @click="showAddUser = true"
         >
           <Icon name="lucide:user-plus" class="h-3.5 w-3.5" />
@@ -60,7 +135,7 @@
 
         <button
           type="button"
-          class="flex items-center gap-1.5 rounded-full bg-navy-soft px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          class="flex items-center gap-1.5 rounded-full  sm:bg-none bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
           @click="openSubjectPicker"
         >
           <Icon name="lucide:refresh-cw" class="h-3.5 w-3.5" />
@@ -69,7 +144,7 @@
 
         <button
           type="button"
-          class="ml-auto flex items-center gap-1.5 rounded-full bg-good px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          class="ml-auto flex sm:bg-none bg-secondary items-center gap-1.5 rounded-full  px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
           @click="showStudyPlan = true"
         >
           <Icon name="lucide:layout-grid" class="h-3.5 w-3.5" />
@@ -78,70 +153,160 @@
       </div>
     </header>
 
+       
+
     <!-- ================================================= -->
     <!-- MAIN -->
     <!-- ================================================= -->
 
-    <main class="min-h-[] h-80 flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-      <!-- EMPTY STATE -->
-      <div
-        v-if="!studySubjects.length"
-        class="flex h-full flex-col items-center justify-center text-center"
-      >
-        <div
-          class="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-line bg-surface text-gold"
-        >
-          <Icon name="lucide:book-open" class="h-7 w-7" />
+
+<!-- ================================================= -->
+<!-- MAIN -->
+<!-- ================================================= -->
+
+<!-- ================================================= -->
+<!-- MAIN: RESPONSIVE CLASSROOM SUBJECTS -->
+<!-- ================================================= -->
+
+<main class=" h-lvh flex-1 bg-white overflow-y-auto px-2 py-6 sm:px-6 lg:px-4">
+
+  <!-- EMPTY STATE -->
+  <div
+    v-if="!studySubjects.length"
+    class="flex min-h-[60vh] flex-col items-center justify-center text-center"
+  >
+    <div
+      class="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-line bg-surface text-primary"
+    >
+      <Icon name="lucide:book-open" class="h-7 w-7" />
+    </div>
+
+    <h2 class="text-base font-semibold text-navy sm:text-lg">
+      No subjects yet
+    </h2>
+
+    <p class="mt-1 max-w-xs text-xs text-ink-soft sm:text-sm">
+      Tap "Set Subject" above to build {{ currentUser }}'s classroom.
+    </p>
+
+    <button
+      type="button"
+      class="mt-5 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90 sm:text-sm"
+      @click="openSubjectPicker"
+    >
+      Set Subject
+    </button>
+  </div>
+
+  <!-- SUBJECTS -->
+  <section v-else class="mx-auto w-full max-w-5xl">
+
+    <!-- SECTION HEADING -->
+    <div class="mb-3 sm:mb-4">
+      <div class="flex items-center gap-1">
+       <div class="flex-shrink-0 bg-amber-300  sm:h-9 sm:w-9 h-7 w-7 flex justify-center items-center rounded-full " > <Icon
+          name="lucide:book-open"
+          class=" shrink-0 text-navy "
+        />
+       </div>
+        <div>
+          <h2 class="text-sm font-bold tracking-tight  ">
+            Your Study Subjects
+          </h2>
+          <p class=" text-xs   ">
+          Track your learning progress.
+          </p>
         </div>
-        <h2
-          class="font-['Fraunces',Georgia,serif] text-lg font-semibold text-navy"
-        >
-          No subjects yet
-        </h2>
-        <p class="mt-1 max-w-xs text-sm text-ink-soft">
-          Tap "Set Subject" above to build {{ currentUser }}'s classroom.
-        </p>
-      </div>
-
-      <!-- SUBJECT GRID -->
-      <div
-        v-else
-        class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        <article
-          v-for="(subject, index) in studySubjects"
-          :key="subject.id"
-          class="group relative cursor-pointer overflow-hidden rounded-xl border border-line bg-mid-bg p-5 text-center shadow-[0_1px_2px_rgba(36,48,74,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-14px_rgba(36,48,74,0.25)]"
-          @click="openSubject(subject)"
-        >
-          <!-- order badge -->
-          <span
-            class="absolute left-3 top-3 rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-soft shadow-sm"
-          >
-            #{{ index + 1 }}
-          </span>
-
-          <!-- progress ring -->
-          <div class="absolute right-3 top-3">
-            <ProgressRing :percent="getSubjectProgress(subject.id)" />
-          </div>
-         
        
-          <!-- icon -->
+      </div>
+
+     
+    </div>
+
+    <!-- SUBJECT CARD GRID -->
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+
+      <article
+        v-for="(subject, index) in studySubjects"
+        :key="subject.id"
+        class="relative min-w-0 overflow-hidden rounded-lg border border-blue-100 sm:bg-white p-2 shadow-[0_5px_20px_rgba(36,48,74,0.06)] transition hover:shadow-[0_8px_24px_rgba(36,48,74,0.10)] sm:rounded-2xl sm:p-3"
+      >
+
+        <!-- SUBJECT NUMBER -->
+        <div class=" flex justify-between">
+         <span
+          class=" w-7 h-7  text-center flex justify-center  items-center rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-primary sm:left-5 sm:top-5 sm:px-3 sm:text-xs"
+        >
+          #{{ index + 1 }}
+        </span>
+
+         <div
+          class=" 3 flex shrink-0 items-center justify-center sm:static sm:ml-2"
+        >
+          <ProgressRing :percent="getSubjectProgress(subject.id)" />
+        </div>
+        </div>
+       
+
+        <!-- PROGRESS RING: TOP RIGHT ON MOBILE -->
+       
+
+        <!-- SUBJECT DETAILS -->
+        <div class="flex min-w-0 items-start gap-3 pt-2 sm:gap-4 sm:pt-4">
+
+          <!-- SUBJECT ICON -->
           <div
-            class="mx-auto mb-3 mt-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-navy"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full "
+            :class="
+              index % 2 === 0
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-violet-100 text-violet-600'
+            "
           >
-            <Icon :name="subject.icon || 'lucide:book-open'" class="h-7 w-7" />
+            <Icon
+              :name="subject.icon || 'lucide:book-open'"
+              class="h-8 w-8 "
+              stroke-width="1.8"
+            />
           </div>
 
-          <h3
-            class="font-['Fraunces',Georgia,serif] text-base font-semibold text-navy"
-          >
-            {{ subject.name }}
-          </h3>
-        </article>
-      </div>
-    </main>
+          <!-- TITLE, PROGRESS TEXT AND BUTTON -->
+          <div class="min-w-0 flex-1 pr- sm:pr-0">
+
+            <h3
+              class="break-words text-sm font-bold leading-snug  "
+            >
+              {{ subject.name }}
+            </h3>
+
+            <p class="mt text-xs leading-relaxed  sm:text-sm">
+              {{ subject.topics?.length || 0 }}
+              {{ subject.topics?.length === 1 ? 'topic' : 'topics' }} available
+            </p>
+           <button
+              type="button"
+              class="mt-3 inline-flex min-h-9 w-full max-w-[250px] items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-2.5 py-2 text-xs font-bold text-primary transition hover:bg-blue-100 active:scale-[0.98] sm:mt-4 sm:min-h-11 sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm"
+              @click="openSubject(subject)"
+            >
+              <span>Start learning</span>
+
+              <Icon
+                name="lucide:arrow-right"
+                class="h-4 w-4 shrink-0 sm:h-5 sm:w-5"
+              />
+            </button>
+           
+
+          </div>
+
+          
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+
 
     <!-- ================================================= -->
     <!-- ADD USER MODAL -->
@@ -150,19 +315,19 @@
     <Teleport to="body">
       <div
         v-if="showAddUser"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm"
       >
         <div
-          class="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-2xl"
+          class="w-full max-w-sm rounded-lg border border-line bg-white p-2 shadow-2xl"
         >
           <div class="mb-4 flex items-center justify-between">
             <h2
-              class="font-['Fraunces',Georgia,serif] text-lg font-semibold text-navy"
+              class=" sm:text-lg font-semibold text-navy"
             >
               Add User
             </h2>
             <button
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-bg text-ink-soft hover:bg-line"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-bg text-black hover:bg-line"
               @click="closeAddUser"
             >
               <Icon name="lucide:x" class="h-4 w-4" />
@@ -182,7 +347,7 @@
 
           <button
             type="button"
-            class="mt-4 w-full rounded-xl bg-navy py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+            class="mt-4 w-full border border-gray-300 bg-gray-50 rounded-xl bg-navy py-2.5 text-sm font-semibold texe transition hover:opacity-90"
             @click="confirmAddUser"
           >
             Add & Switch
@@ -198,15 +363,15 @@
     <Teleport to="body">
       <div
         v-if="showStudyPlan"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm"
       >
         <div
-          class="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl"
+          class="w-full max-w-md rounded-lg border border-line bg-white p-3 shadow-2xl"
         >
           <div class="mb-4 flex items-center justify-between">
             <div>
               <h2
-                class="font-['Fraunces',Georgia,serif] text-lg font-semibold text-navy"
+                class=" text-lg font-semibold text-navy"
               >
                 Study Plan
               </h2>
@@ -229,7 +394,7 @@
             <li
               v-for="(subject, index) in studySubjects"
               :key="subject.id"
-              class="flex items-center gap-2 rounded-lg border border-line bg-bg px-3 py-2"
+              class="flex items-center gap-2 rounded-lg  bg-gray-200 bg-bg px-3 py-2"
             >
               <span
                 class="w-5 shrink-0 text-center font-['IBM_Plex_Mono',monospace] text-xs font-semibold text-ink-soft"
@@ -272,7 +437,7 @@
 
           <button
             type="button"
-            class="mt-4 w-full rounded-xl border border-line bg-bg py-2.5 text-sm font-semibold text-navy transition hover:bg-line"
+            class="mt-4 w-full rounded-lg border border-line bg-bg py-2.5 text-sm font-semibold text-navy transition hover:bg-line"
             @click="
               showStudyPlan = false;
               showSubjectModal = true;
@@ -443,5 +608,5 @@ onMounted(async () => {
   loadLessonProgress()})
 </script>
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap");
+
 </style>
