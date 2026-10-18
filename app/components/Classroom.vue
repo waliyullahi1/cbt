@@ -215,6 +215,8 @@
           </h2>
           <p class=" text-xs   ">
           Track your learning progress.
+         
+        
           </p>
         </div>
        
@@ -243,7 +245,7 @@
          <div
           class=" 3 flex shrink-0 items-center justify-center sm:static sm:ml-2"
         >
-          <ProgressRing :percent="getSubjectProgress(subject.id)" />
+          <ProgressRing :percent="getSubjectProgress(getLessonSubjectId(subject))" />
         </div>
         </div>
        
@@ -276,12 +278,12 @@
             <h3
               class="break-words text-sm font-bold leading-snug  "
             >
-              {{ subject.name }}
+              {{ getClassroomSubjectName(subject) }}
             </h3>
 
             <p class="mt text-xs leading-relaxed  sm:text-sm">
-              {{ subject.topics?.length || 0 }}
-              {{ subject.topics?.length === 1 ? 'topic' : 'topics' }} available
+              {{ totalLession(subject?.id)?.lessonCount || 0 }}
+              {{ totalLession(subject?.id)?.lessonCount?.length === 1 ? 'topic' : 'topics' }} available
             </p>
            <button
               type="button"
@@ -302,6 +304,9 @@
           
         </div>
       </article>
+    </div>
+
+    <div class="h-40 w-full">
     </div>
   </section>
 </main>
@@ -406,7 +411,7 @@
                 class="h-4 w-4 shrink-0 text-gold"
               />
               <span class="flex-1 truncate text-sm font-medium text-ink">{{
-                subject.name
+                getClassroomSubjectName(subject)
               }}</span>
 
               <button
@@ -569,7 +574,7 @@ const openSubjectPicker = async () => {
 const openSubject = async (subject: any) => {
   if (!subject?.slug && !subject?.id) return;
 
-  const subjectSlug = String(subject.slug || subject.id);
+  const subjectSlug = getLessonSubjectId(subject);
   let lastReadLessonSlug: string | null = null;
 
   try {
@@ -602,6 +607,32 @@ const goHome = () => {
   emit("gohome");
 };
 
+
+const totalLession = (subject)=>{
+ const subjectId = getLessonSubjectId(subject);
+ return availableSubjects.value.find(
+   (item) => getLessonSubjectId(item) === subjectId,
+ );
+}
+
+const getLessonSubjectId = (subject: any): string => {
+  const rawId = String(
+    typeof subject === "object" && subject !== null
+      ? subject.slug || subject.id || ""
+      : subject || "",
+  ).trim();
+  const normalizedId = rawId.toLowerCase().replace(/[\s_]+/g, "-");
+
+  return ["english", "english-language", "use-of-english"].includes(normalizedId)
+    ? "use-of-english"
+    : rawId;
+};
+
+const getClassroomSubjectName = (subject: any): string => {
+  return getLessonSubjectId(subject) === "use-of-english"
+    ? "Use of English"
+    : subject.name;
+};
 
 onMounted(async () => {
   // Load progress saved from the lesson page

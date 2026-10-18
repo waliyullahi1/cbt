@@ -664,6 +664,67 @@ export const useLessonProgress = () => {
       .join(':')
   }
 
+
+ const pruneLessonProgress = (subjects: any[]) => {
+  const normalize = (value: unknown) =>
+    String(value ?? '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
+
+  // Build what is valid now: subject -> its lesson identifiers and lesson count
+  const valid = new Map<string, { ids: Set<string>; total: number }>()
+
+  for (const subject of subjects) {
+    const ids = new Set<string>()
+    let total = 0
+
+    for (const topic of subject.topics ?? []) {
+      for (const lesson of topic.lessons ?? []) {
+        lessonKeys(lesson).forEach((key) => ids.add(key))
+        total++
+      }
+    }
+
+    const entry = { ids, total }
+    valid.set(String(subject.id), entry)
+    valid.set(normalize(subject.name), entry)
+  }
+
+  for (const subjectSlug of Object.keys(lessonProgress.value)) {
+    const entry = valid.get(subjectSlug)
+
+    // Subject no longer exists: remove all its progress
+    if (!entry) {
+      delete lessonProgress.value[subjectSlug]
+      continue
+    }
+
+    const record = lessonProgress.value[subjectSlug]
+    record.lessons = record.lessons ?? {}
+
+    // Remove records of lessons that no longer exist
+    for (const key of Object.keys(record.lessons)) {
+      if (!entry.ids.has(key)) delete record.lessons[key]
+    }
+
+    // Recalculate the total from what is really read
+    const readCount = Object.values(record.lessons)
+      .filter((item: any) => item?.read === true).length
+
+    record.totalSubjectProgress = entry.total
+      ? Math.min(100, (readCount / entry.total) * 100)
+      : 0
+
+    // Clear "continue reading" if that lesson is gone
+    if (
+      record.lastOpenedLessonSlug &&
+      !entry.ids.has(record.lastOpenedLessonSlug)
+    ) {
+      delete record.lastOpenedLessonSlug
+      delete record.lastOpenedAt
+    }
+  }
+
+  saveLessonProgress()
+}
   return {
     lessonProgress,
 
@@ -703,5 +764,7 @@ export const useLessonProgress = () => {
     resetReadingTracker,
 
     formatReadingTime,
+    pruneLessonProgress
   }
 }
+

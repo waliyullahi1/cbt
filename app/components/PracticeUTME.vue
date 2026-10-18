@@ -822,7 +822,7 @@ const getSubjectMarks = (subject) =>
 const selectedSubjects = ref([
   {
     id: "english-language",
-    name: "ENGLISH LANGUAGE",
+    name: "English Language",
     icon: "lucide:book-open",
     description: "Test your knowledge of English language and comprehension.",
   },

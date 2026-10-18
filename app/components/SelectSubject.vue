@@ -1071,10 +1071,10 @@ const formatSubjectName = (subject) => {
       'Economics',
 
     english:
-      'ENGLISH LANGUAGE',
+      'English Language',
 
     'english-language':
-      'ENGLISH LANGUAGE',
+      'English Language',
 
     'fine-art':
       'Fine Art',

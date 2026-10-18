@@ -4,7 +4,8 @@ import {
   getLessonsDB,
 } from "./databases"
 import { scoreLessonForSelfStudy } from "./lessonTeachingScore"
-
+const { loadLessonProgress, pruneLessonProgress } = useLessonProgress()
+import  platform from "~/platforms"
 // ============================================================
 // GLOBAL SAVE LOCK
 // ============================================================
@@ -1974,7 +1975,9 @@ export async function saveAllContent({
       )
 
       console.log("########################################")
-
+      const sidebar = await platform.lesson.getSidebar()
+      loadLessonProgress()
+      pruneLessonProgress(sidebar)
 
       return {
         subjects: subjectCount,

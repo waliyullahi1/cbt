@@ -168,7 +168,7 @@ export default defineNuxtConfig({
 
     public: {
       projectName: " C lesson",
-      apiUrl: 'https://www.api.examtips.abanise.com'
+      apiUrl: 'http://localhost:5000'
         // "https://www.api.examtips.abanise.com",
     },
   },

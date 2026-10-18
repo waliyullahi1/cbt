@@ -1026,7 +1026,7 @@ const getQuestionClass = (question, index) => {
                   v-if="currentQuestion"
                   :question="currentQuestion"
                 />
-                {{currentQuestion}}
+               
               </div>
             </div>
           </div>

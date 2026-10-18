@@ -239,6 +239,8 @@ export const useClassroom = () => {
 
     try {
       const subjects = await platform.lesson.getSubjects()
+      console.log(subjects, 'subjectssubjectssubjects');
+      
       availableSubjects.value = subjects
 
       const subjectsById = new Map(

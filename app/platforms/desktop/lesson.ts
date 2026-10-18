@@ -820,9 +820,11 @@ export interface AvailableSubject {
   lessonCount: number
 }
 
+
+
+
 export async function getSubjects(): Promise<AvailableSubject[]> {
   const db = await readyLessonsDB()
-
   return db.select<AvailableSubject[]>(`
     SELECT
       s.id,
