@@ -570,7 +570,6 @@
           </label>
         </div>
       </section>
-{{available}}
 
 
        <div
