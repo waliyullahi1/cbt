@@ -1,82 +1,151 @@
-
 import {
   getQuestionsDB,
   getLessonsDB,
 } from "./databases"
 import { scoreLessonForSelfStudy } from "./lessonTeachingScore"
-const { loadLessonProgress, pruneLessonProgress } = useLessonProgress()
-import  platform from "~/platforms"
+import platform from "~/platforms"
+
 // ============================================================
-// GLOBAL SAVE LOCK
-// ============================================================
-//
-// Prevents two database save operations from running at the
-// same time.
-//
-// Example:
-// saveSubjects()
-// saveTopics()
-//
-// The second operation waits until the first one finishes.
+// SETTINGS
 // ============================================================
 
-let saveQueue: Promise<any> = Promise.resolve()
+// Change this if your backend uses a different English subject id
+// (for example "use-of-english").
+const ENGLISH_SUBJECT_ID = "english-language"
+const ENGLISH_ALIASES = ["english", "english language", "english-language"]
+
+// 24 columns x 1000 rows = 24,000 variables (SQLite limit is 32,766).
+// If you ever see "too many SQL variables", lower this to 200.
+const QUESTION_BATCH_SIZE = 1000
+
+// Max rows per INSERT for subjects / topics / lessons.
+const MAX_ROWS_PER_INSERT = 500
+const MAX_VARIABLES_PER_STATEMENT = 30000
+
+const SUBJECT_COLUMNS = ["id", "name", "icon", "description", "order_index"]
+const TOPIC_COLUMNS = ["id", "subject_id", "topic_number", "title", "order_index"]
+const LESSON_COLUMNS = [
+  "id",
+  "topic_id",
+  "subject_id",
+  "topic_number",
+  "slug",
+  "title",
+  "summary",
+  "blocks",
+  "search_text",
+  "order_index",
+  "teaching_score",
+  "teaching_level",
+  "teaching_feedback",
+]
+
+// ============================================================
+// SAVE LOCK (one queue per database)
+// ============================================================
+// Writes to the SAME database run one at a time. Writes to
+// DIFFERENT databases (questions.db vs lessons.db) run in
+// parallel, which makes the download much faster.
+// ============================================================
+
+type DbKey = "questions" | "lessons"
+
+const saveQueues = new Map<DbKey, Promise<any>>()
+
+function errorMessage(error: unknown): string {
+  return String(error instanceof Error ? error.message : error).toLowerCase()
+}
 
 function isDatabaseLocked(error: unknown): boolean {
-  const message = String(
-    error instanceof Error ? error.message : error
-  ).toLowerCase()
+  const message = errorMessage(error)
 
   return (
     message.includes("database is locked") ||
     message.includes("sqlite_busy") ||
     message.includes("sqlite_locked") ||
-    message.includes("code: 5")
+    /code: 5\b/.test(message)
   )
 }
+
+function isDatabaseReadonly(error: unknown): boolean {
+  const message = errorMessage(error)
+
+  return (
+    message.includes("readonly database") ||
+    message.includes("read-only") ||
+    /code: 8\b/.test(message)
+  )
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function retryLockedOperation<T>(
   operation: () => Promise<T>
 ): Promise<T> {
-  const delays = [250, 500, 1000, 2000, 4000, 8000]
+  const lockedDelays = [250, 500, 1000, 2000, 4000]
+  const readonlyDelays = [400, 1200]
+  let lockedAttempt = 0
+  let readonlyAttempt = 0
 
-  for (let attempt = 0; ; attempt++) {
+  while (true) {
     try {
       return await operation()
     } catch (error) {
-      const delay = delays[attempt]
+      if (isDatabaseReadonly(error)) {
+        // A read-only error is sometimes a stale connection (the file was
+        // replaced while open). The operation re-opens the DB on every try,
+        // so one or two retries fix that case. If it keeps failing, the
+        // file or folder itself is not writable.
+        const delay = readonlyDelays[readonlyAttempt++]
+        if (delay === undefined) {
+          throw new Error(
+            "The local database is read-only (file or folder is not writable). " +
+              "Original error: " +
+              errorMessage(error)
+          )
+        }
+        console.warn(`SQLite is read-only; retrying (${readonlyAttempt}/${readonlyDelays.length})`)
+        await sleep(delay)
+        continue
+      }
+
+      const delay = lockedDelays[lockedAttempt++]
       if (!isDatabaseLocked(error) || delay === undefined) {
         throw error
       }
 
       console.warn(
-        `SQLite is busy; retrying content save (${attempt + 1}/${delays.length})`
+        `SQLite is busy; retrying content save (${lockedAttempt}/${lockedDelays.length})`
       )
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      await sleep(delay)
     }
   }
 }
 
 async function runSequentially<T>(
+  key: DbKey,
   operation: () => Promise<T>
 ): Promise<T> {
-
-  const previous = saveQueue
+  const previous = saveQueues.get(key) ?? Promise.resolve()
 
   let release!: () => void
 
-  saveQueue = new Promise<void>((resolve) => {
-    release = resolve
-  })
+  saveQueues.set(
+    key,
+    new Promise<void>((resolve) => {
+      release = resolve
+    })
+  )
 
-  await previous
+  // A failed earlier save must not block later saves.
+  await previous.catch(() => {})
 
   try {
     const run = () => retryLockedOperation(operation)
 
     if (typeof navigator !== "undefined" && navigator.locks) {
       return await navigator.locks.request(
-        "cbt-sqlite-content-write",
+        `cbt-sqlite-content-write-${key}`,
         { mode: "exclusive" },
         run
       )
@@ -88,6 +157,23 @@ async function runSequentially<T>(
   }
 }
 
+// Best-effort speed tuning. Safe to ignore if it fails.
+// The content can always be downloaded again, so we trade a little
+// crash-safety for a lot of write speed while syncing.
+const tunedDatabases = new WeakSet<object>()
+
+async function tuneForBulkWrite(db: any) {
+  if (tunedDatabases.has(db)) return
+  tunedDatabases.add(db)
+
+  for (const pragma of ["PRAGMA synchronous = OFF", "PRAGMA temp_store = MEMORY"]) {
+    try {
+      await db.execute(pragma)
+    } catch {
+      // ignore
+    }
+  }
+}
 
 // ============================================================
 // HELPERS
@@ -118,9 +204,7 @@ function normalizeQuestionSubject(value: unknown): unknown {
   }
 
   const normalized = value.trim().toLowerCase()
-  return ["english", "english language", "english-language"].includes(normalized)
-    ? "english-language"
-    : value
+  return ENGLISH_ALIASES.includes(normalized) ? ENGLISH_SUBJECT_ID : value
 }
 
 function getId(item: any): string {
@@ -129,29 +213,44 @@ function getId(item: any): string {
 
 function getSubjectRecordId(item: any): string {
   return normalizeId(
-    item?.subjectId ??
-    item?.subject_id ??
-    item?._id ??
-    item?.id
+    item?.subjectId ?? item?.subject_id ?? item?._id ?? item?.id
   )
 }
 
 function getTopicRecordId(item: any): string {
   return normalizeId(
-    item?.topicId ??
-    item?.topic_id ??
-    item?._id ??
-    item?.id
+    item?.topicId ?? item?.topic_id ?? item?._id ?? item?.id
   )
 }
 
 function getLessonRecordId(item: any): string {
   return normalizeId(
-    item?.lessonId ??
-    item?.lesson_id ??
-    item?._id ??
-    item?.id
+    item?.lessonId ?? item?.lesson_id ?? item?._id ?? item?.id
   )
+}
+
+function getSubjectId(item: any): string {
+  const value =
+    item?.subject_id ??
+    item?.subjectId ??
+    item?.subject?.subjectId ??
+    item?.subject?._id ??
+    item?.subject?.id ??
+    (typeof item?.subject === "string" ? item.subject : "")
+
+  return normalizeId(value)
+}
+
+function getTopicId(item: any): string {
+  const value =
+    item?.topic_id ??
+    item?.topicId ??
+    item?.topic?.topicId ??
+    item?.topic?._id ??
+    item?.topic?.id ??
+    (typeof item?.topic === "string" ? item.topic : "")
+
+  return normalizeId(value)
 }
 
 function cleanText(value: any): string | null {
@@ -184,28 +283,128 @@ function serializeBlocks(value: any): string {
   return JSON.stringify(value)
 }
 
+function chunk<T>(items: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size))
+  }
+  return result
+}
+
+async function rollbackQuietly(db: any) {
+  try {
+    await db.execute("ROLLBACK")
+  } catch {
+    // SQLite may already have rolled back; keep the original error.
+  }
+}
+
+// ============================================================
+// ROW BUILDERS
+// ============================================================
+
+function buildSubjectRow(subject: any): any[] | null {
+  const id = getSubjectRecordId(subject)
+  const name = cleanText(subject?.name ?? subject?.title ?? subject?.subject)
+
+  if (!id || !name) {
+    return null
+  }
+
+  return [
+    id,
+    name,
+    cleanText(subject?.icon),
+    cleanText(subject?.description),
+    cleanOrderIndex(subject?.order_index ?? subject?.orderIndex),
+  ]
+}
+
+function buildTopicRow(topic: any): any[] | null {
+  const id = getTopicRecordId(topic)
+  const subjectId = getSubjectId(topic)
+  const title = cleanText(topic?.title ?? topic?.name)
+
+  if (!id || !subjectId || !title) {
+    return null
+  }
+
+  return [
+    id,
+    subjectId,
+    topic?.topic_number ?? topic?.topicNumber ?? null,
+    title,
+    cleanOrderIndex(topic?.order_index ?? topic?.orderIndex),
+  ]
+}
+
+function buildLessonRow(
+  lesson: any,
+  resolveSubjectId: (topicId: string, subjectId: string) => string | null
+): any[] | null {
+  const id = getLessonRecordId(lesson)
+  const topicId = getTopicId(lesson)
+  const title = cleanText(lesson?.title ?? lesson?.name)
+  const slug = cleanText(lesson?.slug)
+
+  if (!id || !topicId || !title || !slug) {
+    return null
+  }
+
+  const resolvedSubjectId = resolveSubjectId(topicId, getSubjectId(lesson))
+  if (!resolvedSubjectId) {
+    return null
+  }
+
+  const summary = cleanText(lesson?.summary)
+  const blocks = serializeBlocks(lesson?.blocks)
+  const teachingScore = scoreLessonForSelfStudy(title, summary, blocks)
+  const searchText = cleanText(lesson?.search_text ?? lesson?.searchText)
+
+  return [
+    id,
+    topicId,
+    resolvedSubjectId,
+    lesson?.topic_number ?? lesson?.topicNumber ?? null,
+    slug,
+    title,
+    summary,
+    blocks,
+    searchText,
+    cleanOrderIndex(lesson?.order_index ?? lesson?.orderIndex),
+    teachingScore.score,
+    teachingScore.level,
+    JSON.stringify(teachingScore.feedback),
+  ]
+}
+
+// ============================================================
+// BATCH WRITERS
+// ============================================================
+
 async function executeRowsInBatches(
   db: any,
   tableName: string,
   columns: string[],
   rows: any[][]
 ): Promise<void> {
+  if (rows.length === 0) return
+
   const batchSize = Math.max(
     1,
-    Math.floor(900 / columns.length)
+    Math.min(
+      MAX_ROWS_PER_INSERT,
+      Math.floor(MAX_VARIABLES_PER_STATEMENT / columns.length)
+    )
   )
-  const updateColumns = columns.filter(
-    (column) => column !== "id"
-  )
-  const updates = updateColumns
+  const rowPlaceholder = `(${columns.map(() => "?").join(", ")})`
+  const updates = columns
+    .filter((column) => column !== "id")
     .map((column) => `${column} = excluded.${column}`)
     .join(", ")
 
-  for (let offset = 0; offset < rows.length; offset += batchSize) {
-    const batch = rows.slice(offset, offset + batchSize)
-    const placeholders = batch
-      .map(() => `(${columns.map(() => "?").join(", ")})`)
-      .join(", ")
+  for (const batch of chunk(rows, batchSize)) {
+    const placeholders = batch.map(() => rowPlaceholder).join(", ")
 
     await db.execute(
       `
@@ -218,12 +417,22 @@ async function executeRowsInBatches(
   }
 }
 
-function isLessonSlugConflict(error: unknown): boolean {
-  const message = String(
-    error instanceof Error ? error.message : error
-  ).toLowerCase()
+async function deleteIds(db: any, tableName: string, ids: string[]) {
+  for (const batch of chunk(ids, 500)) {
+    await db.execute(
+      `DELETE FROM ${tableName} WHERE id IN (${batch.map(() => "?").join(", ")})`,
+      batch
+    )
+  }
+}
 
-  return message.includes("lessons.slug")
+async function selectIds(db: any, sql: string): Promise<Set<string>> {
+  const rows = await db.select(sql) as { id: string }[]
+  return new Set(rows.map((row) => normalizeId(row.id)))
+}
+
+function isLessonSlugConflict(error: unknown): boolean {
+  return errorMessage(error).includes("lessons.slug")
 }
 
 async function saveLessonRows(
@@ -240,10 +449,10 @@ async function saveLessonRows(
   for (const row of rows) {
     const slug = normalizeId(row[slugIndex])
     if (seenSlugs.has(slug)) {
-      console.warn(
-        "Lesson skipped - duplicate slug in downloaded batch:",
-        { id: normalizeId(row[idIndex]), slug }
-      )
+      console.warn("Lesson skipped - duplicate slug in downloaded batch:", {
+        id: normalizeId(row[idIndex]),
+        slug,
+      })
       skipped++
       continue
     }
@@ -251,6 +460,7 @@ async function saveLessonRows(
     uniqueRows.push(row)
   }
 
+  // Fast path: one big upsert per batch.
   try {
     await executeRowsInBatches(db, "lessons", columns, uniqueRows)
     return { saved: uniqueRows.length, skipped }
@@ -264,38 +474,31 @@ async function saveLessonRows(
     )
   }
 
-  const columnIndexes = new Map(
-    columns.map((column, index) => [column, index])
-  )
+  // Slow path: only runs when an existing local slug clashes.
+  const columnIndexes = new Map(columns.map((column, index) => [column, index]))
   const indexOf = (column: string) => columnIndexes.get(column)!
+  const nonIdColumns = columns.filter((column) => column !== "id")
+  const assignments = nonIdColumns.map((column) => `${column} = ?`)
   let saved = 0
 
   for (const row of uniqueRows) {
     const id = normalizeId(row[indexOf("id")])
     const slug = normalizeId(row[indexOf("slug")])
 
-    const existingRows = await db.select<
-      { id: string; slug: string }[]
-    >(
+    const existingRows = await db.select(
       "SELECT id, slug FROM lessons WHERE id = ? OR slug = ?",
       [id, slug]
-    )
+    ) as { id: string; slug: string }[]
 
-    const byId = existingRows.find(
-      (existing) => normalizeId(existing.id) === id
-    )
-    const bySlug = existingRows.find(
-      (existing) => normalizeId(existing.slug) === slug
-    )
+    const byId = existingRows.find((e) => normalizeId(e.id) === id)
+    const bySlug = existingRows.find((e) => normalizeId(e.slug) === slug)
     const slugMatches = existingRows.filter(
-      (existing) => normalizeId(existing.slug) === slug
+      (e) => normalizeId(e.slug) === slug
     )
 
     if (
       slugMatches.length > 1 ||
-      (byId &&
-        bySlug &&
-        normalizeId(byId.id) !== normalizeId(bySlug.id))
+      (byId && bySlug && normalizeId(byId.id) !== normalizeId(bySlug.id))
     ) {
       console.error(
         "Lesson skipped - ID and slug belong to different local rows:",
@@ -305,32 +508,17 @@ async function saveLessonRows(
       continue
     }
 
-    const assignments = columns
-      .filter((column) => column !== "id")
-      .map((column) => `${column} = ?`)
-
     if (bySlug || byId) {
       const existingId = normalizeId((bySlug ?? byId)!.id)
       await db.execute(
-        `
-        UPDATE lessons
-        SET id = ?, ${assignments.join(", ")}
-        WHERE id = ?
-        `,
-        [
-          id,
-          ...columns
-            .filter((column) => column !== "id")
-            .map((column) => row[indexOf(column)]),
-          existingId
-        ]
+        `UPDATE lessons SET id = ?, ${assignments.join(", ")} WHERE id = ?`,
+        [id, ...nonIdColumns.map((column) => row[indexOf(column)]), existingId]
       )
     } else {
       await db.execute(
-        `
-        INSERT INTO lessons (${columns.join(", ")})
-        VALUES (${columns.map(() => "?").join(", ")})
-        `,
+        `INSERT INTO lessons (${columns.join(", ")}) VALUES (${columns
+          .map(() => "?")
+          .join(", ")})`,
         row
       )
     }
@@ -341,45 +529,39 @@ async function saveLessonRows(
   return { saved, skipped }
 }
 
+// ============================================================
+// SEARCH INDEX (FTS)
+// ============================================================
+// Runs AFTER the transaction commits. A search-index problem
+// must never block the content download.
+//
+// Uses the single "rebuild" command instead of DELETE + INSERT,
+// which is what caused "database disk image is malformed"
+// (code 267) on FTS tables.
+// ============================================================
 
-function getSubjectId(item: any): string {
-
-  const value =
-    item?.subject_id ??
-    item?.subjectId ??
-    item?.subject?.subjectId ??
-    item?.subject?._id ??
-    item?.subject?.id ??
-    (
-      typeof item?.subject === "string"
-        ? item.subject
-        : ""
+async function rebuildLessonSearchIndex(db: any) {
+  try {
+    const ftsTable = await db.select(
+      `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'lessons_fts' LIMIT 1`
     )
 
-  return normalizeId(value)
-}
+    if (ftsTable.length === 0) return
 
-
-function getTopicId(item: any): string {
-
-  const value =
-    item?.topic_id ??
-    item?.topicId ??
-    item?.topic?.topicId ??
-    item?.topic?._id ??
-    item?.topic?.id ??
-    (
-      typeof item?.topic === "string"
-        ? item.topic
-        : ""
+    await db.execute(`INSERT INTO lessons_fts(lessons_fts) VALUES('rebuild')`)
+  } catch (error) {
+    console.warn(
+      "⚠️ Lesson search index could not be rebuilt (content was saved):",
+      error
     )
-
-  return normalizeId(value)
+  }
 }
-
 
 // ============================================================
 // REPLACE LESSON DATASET WITH LATEST CONTENT
+// ============================================================
+// IMPORTANT: call this ONCE with ALL subjects, topics and lessons.
+// Anything not in the payload is removed from the local database.
 // ============================================================
 
 export async function replaceLessonsWithLatestData(
@@ -393,7 +575,7 @@ export async function replaceLessonsWithLatestData(
   topics: number
   lessons: number
 }> {
-  return runSequentially(async () => {
+  return runSequentially("lessons", async () => {
     const hasSubjects = Array.isArray(payload.subjects)
     const hasTopics = Array.isArray(payload.topics)
     const hasLessons = Array.isArray(payload.lessons)
@@ -404,199 +586,95 @@ export async function replaceLessonsWithLatestData(
       )
     }
 
-    const subjects = hasSubjects ? payload.subjects! : []
-    const topics = hasTopics ? payload.topics! : []
-    const lessons = hasLessons ? payload.lessons! : []
-
     const db = await getLessonsDB()
+    await tuneForBulkWrite(db)
 
-    const subjectRows = subjects
-      .map((subject: any) => {
-        const id = getSubjectRecordId(subject)
-        const name = cleanText(subject?.name ?? subject?.title ?? subject?.subject)
-
-        if (!id || !name) {
-          return null
-        }
-
-        return [
-          id,
-          name,
-          cleanText(subject?.icon),
-          cleanText(subject?.description),
-          cleanOrderIndex(subject?.order_index ?? subject?.orderIndex),
-        ]
-      })
+    const subjectRows = (payload.subjects ?? [])
+      .map(buildSubjectRow)
       .filter(Boolean) as any[][]
 
-    const topicRows = topics
-      .map((topic: any) => {
-        const id = getTopicRecordId(topic)
-        const subjectId = getSubjectId(topic)
-        const title = cleanText(topic?.title ?? topic?.name)
-
-        if (!id || !subjectId || !title) {
-          return null
-        }
-
-        return [
-          id,
-          subjectId,
-          topic?.topic_number ?? topic?.topicNumber ?? null,
-          title,
-          cleanOrderIndex(topic?.order_index ?? topic?.orderIndex),
-        ]
-      })
+    const topicRows = (payload.topics ?? [])
+      .map(buildTopicRow)
       .filter(Boolean) as any[][]
 
-    const lessonRows = lessons
-      .map((lesson: any) => {
-        const id = getLessonRecordId(lesson)
-        const topicId = getTopicId(lesson)
-        const subjectId = getSubjectId(lesson)
-        const title = cleanText(lesson?.title ?? lesson?.name)
-        const slug = cleanText(lesson?.slug)
+    const topicSubjectById = new Map<string, string>(
+      topicRows.map((row) => [String(row[0]), String(row[1])])
+    )
 
-        if (!id || !topicId || !title || !slug) {
-          return null
-        }
-
-        const topicSubjectId = topicRows.find((row) => row[0] === topicId)?.[1]
-        const resolvedSubjectId = subjectId || topicSubjectId || null
-
-        if (!resolvedSubjectId) {
-          return null
-        }
-
-        const summary = cleanText(lesson?.summary)
-        const blocks = serializeBlocks(lesson?.blocks)
-        const teachingScore = scoreLessonForSelfStudy(
-          title,
-          summary,
-          blocks
+    const lessonRows = (payload.lessons ?? [])
+      .map((lesson) =>
+        buildLessonRow(
+          lesson,
+          (topicId, subjectId) =>
+            subjectId || topicSubjectById.get(topicId) || null
         )
-        const searchText = cleanText(
-          lesson?.search_text ??
-          lesson?.searchText
-        )
-
-        return [
-          id,
-          topicId,
-          resolvedSubjectId,
-          lesson?.topic_number ?? lesson?.topicNumber ?? null,
-          slug,
-          title,
-          summary,
-          blocks,
-          searchText,
-          cleanOrderIndex(lesson?.order_index ?? lesson?.orderIndex),
-          teachingScore.score,
-          teachingScore.level,
-          JSON.stringify(teachingScore.feedback),
-        ]
-      })
+      )
       .filter(Boolean) as any[][]
 
-    const subjectIds = subjectRows.map((row) => row[0])
-    const topicIds = topicRows.map((row) => row[0])
-    const lessonIds = lessonRows.map((row) => row[0])
+    const keepSubjects = new Set(subjectRows.map((row) => String(row[0])))
+    const keepTopics = new Set(topicRows.map((row) => String(row[0])))
+    const keepLessons = new Set(lessonRows.map((row) => String(row[0])))
 
     await db.execute("BEGIN TRANSACTION")
 
     try {
-      if (lessonIds.length > 0) {
-        await db.execute(
-          `DELETE FROM lessons WHERE id NOT IN (${lessonIds.map(() => "?").join(", ")})`,
-          lessonIds
-        )
-      } else {
-        await db.execute("DELETE FROM lessons")
-      }
-
-      if (topicIds.length > 0) {
-        await db.execute(
-          `DELETE FROM topics WHERE id NOT IN (${topicIds.map(() => "?").join(", ")}) AND id NOT IN (SELECT DISTINCT topic_id FROM lessons)`,
-          topicIds
-        )
-      } else {
-        await db.execute("DELETE FROM topics WHERE id NOT IN (SELECT DISTINCT topic_id FROM lessons)")
-      }
-
-      if (subjectIds.length > 0) {
-        await db.execute(
-          `DELETE FROM subjects WHERE id NOT IN (${subjectIds.map(() => "?").join(", ")}) AND id NOT IN (SELECT DISTINCT subject_id FROM topics)`,
-          subjectIds
-        )
-      } else {
-        await db.execute("DELETE FROM subjects WHERE id NOT IN (SELECT DISTINCT subject_id FROM topics)")
-      }
-
-      if (subjectRows.length > 0) {
-        await executeRowsInBatches(
-          db,
-          "subjects",
-          ["id", "name", "icon", "description", "order_index"],
-          subjectRows
-        )
-      }
-
-      if (topicRows.length > 0) {
-        await executeRowsInBatches(
-          db,
-          "topics",
-          ["id", "subject_id", "topic_number", "title", "order_index"],
-          topicRows
-        )
-      }
-
-      if (lessonRows.length > 0) {
-        await saveLessonRows(db, [
-          "id",
-          "topic_id",
-          "subject_id",
-          "topic_number",
-          "slug",
-          "title",
-          "summary",
-          "blocks",
-          "search_text",
-          "order_index",
-          "teaching_score",
-          "teaching_level",
-          "teaching_feedback",
-        ], lessonRows)
-      }
-
-      const ftsTable = await db.select(
-        `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'lessons_fts' LIMIT 1`
+      // 1. Remove lessons that are no longer in the dataset
+      const existingLessons = await selectIds(db, "SELECT id FROM lessons")
+      await deleteIds(
+        db,
+        "lessons",
+        [...existingLessons].filter((id) => !keepLessons.has(id))
       )
 
-      if (ftsTable.length > 0) {
-        await db.execute("DELETE FROM lessons_fts")
-        await db.execute(`
-          INSERT INTO lessons_fts (
-            rowid,
-            title,
-            summary,
-            search_text
-          )
-          SELECT rowid, title, summary, search_text
-          FROM lessons
-        `)
+      // 2. Remove old topics that no remaining lesson uses
+      const usedTopics = await selectIds(
+        db,
+        "SELECT DISTINCT topic_id AS id FROM lessons"
+      )
+      const existingTopics = await selectIds(db, "SELECT id FROM topics")
+      await deleteIds(
+        db,
+        "topics",
+        [...existingTopics].filter(
+          (id) => !keepTopics.has(id) && !usedTopics.has(id)
+        )
+      )
+
+      // 3. Remove old subjects that no remaining topic uses
+      const usedSubjects = await selectIds(
+        db,
+        "SELECT DISTINCT subject_id AS id FROM topics"
+      )
+      const existingSubjects = await selectIds(db, "SELECT id FROM subjects")
+      await deleteIds(
+        db,
+        "subjects",
+        [...existingSubjects].filter(
+          (id) => !keepSubjects.has(id) && !usedSubjects.has(id)
+        )
+      )
+
+      // 4. Insert / update in dependency order
+      await executeRowsInBatches(db, "subjects", SUBJECT_COLUMNS, subjectRows)
+      await executeRowsInBatches(db, "topics", TOPIC_COLUMNS, topicRows)
+
+      if (lessonRows.length > 0) {
+        await saveLessonRows(db, LESSON_COLUMNS, lessonRows)
       }
 
       await db.execute("COMMIT")
-
-      return {
-        subjects: subjectRows.length,
-        topics: topicRows.length,
-        lessons: lessonRows.length,
-      }
     } catch (error) {
-      await db.execute("ROLLBACK")
+      await rollbackQuietly(db)
       console.error("❌ LESSON DATASET REPLACEMENT FAILED:", error)
       throw error
+    }
+
+    await rebuildLessonSearchIndex(db)
+
+    return {
+      subjects: subjectRows.length,
+      topics: topicRows.length,
+      lessons: lessonRows.length,
     }
   })
 }
@@ -604,1387 +682,383 @@ export async function replaceLessonsWithLatestData(
 // ============================================================
 // SAVE SUBJECTS
 // ============================================================
-// lessons.db
-//
-// TABLE:
-//
-// subjects
-//   id
-//   name
-//   icon
-//   description
-//   order_index
-// ============================================================
 
-export async function saveSubjects(
-  subjects: any[]
-) {
-
-  return runSequentially(
-    async () => {
-
-      if (
-        !Array.isArray(subjects) ||
-        subjects.length === 0
-      ) {
-
-        console.warn(
-          "⚠️ No subjects received"
-        )
-
-        return 0
-      }
-
-
-      const db =
-        await getLessonsDB()
-
-
-      console.log("")
-      console.log("========================================")
-      console.log("📚 SAVING SUBJECTS")
-      console.log("========================================")
-      console.log(
-        `📦 Received: ${subjects.length}`
-      )
-
-
-      let savedCount = 0
-      let skippedCount = 0
-      const rows: any[][] = []
-
-
-      try {
-
-        for (
-          const subject of subjects
-        ) {
-
-          // ==================================================
-          // Stable backend identifier (subjectId) with legacy fallbacks.
-          // ==================================================
-
-          const id =
-            getSubjectRecordId(subject)
-
-
-          if (!id) {
-
-            console.warn(
-              "⚠️ Subject skipped - missing backend subject ID:",
-              subject
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          // ==================================================
-          // NAME
-          // ==================================================
-
-          const name =
-            subject?.name ??
-            subject?.title ??
-            subject?.subject ??
-            ""
-
-          const cleanName = cleanText(name)
-          if (!cleanName) {
-
-            console.warn(
-              "⚠️ Subject skipped - missing name:",
-              id
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          // ==================================================
-          // OTHER FIELDS
-          // ==================================================
-
-          const icon =
-            cleanText(subject?.icon)
-
-
-          const description =
-            cleanText(subject?.description)
-
-
-          const orderIndex = cleanOrderIndex(
-            subject?.order_index ??
-            subject?.orderIndex
-          )
-
-
-          // ==================================================
-          // SAVE
-          // ==================================================
-
-          rows.push([
-            id,
-            cleanName,
-            icon,
-            description,
-            orderIndex
-          ])
-
-          console.log(
-            `📚 Subject saved: ${cleanName} [${id}]`
-          )
-        }
-
-        await executeRowsInBatches(
-          db,
-          "subjects",
-          ["id", "name", "icon", "description", "order_index"],
-          rows
-        )
-        savedCount = rows.length
-
-
-        console.log(
-          `✅ SUBJECTS SAVED: ${savedCount}/${subjects.length}`
-        )
-
-        console.log(
-          `⚠️ SUBJECTS SKIPPED: ${skippedCount}`
-        )
-
-
-        return savedCount
-
-
-      } catch (error) {
-
-        console.error(
-          "❌ SUBJECT SAVE ERROR:",
-          error
-        )
-
-
-        throw error
-      }
+export async function saveSubjects(subjects: any[]) {
+  return runSequentially("lessons", async () => {
+    if (!Array.isArray(subjects) || subjects.length === 0) {
+      console.warn("⚠️ No subjects received")
+      return 0
     }
-  )
-}
 
+    const db = await getLessonsDB()
+    const rows = subjects.map(buildSubjectRow).filter(Boolean) as any[][]
+
+    try {
+      await executeRowsInBatches(db, "subjects", SUBJECT_COLUMNS, rows)
+      console.log(
+        `✅ SUBJECTS SAVED: ${rows.length}/${subjects.length} (skipped ${subjects.length - rows.length})`
+      )
+      return rows.length
+    } catch (error) {
+      console.error("❌ SUBJECT SAVE ERROR:", error)
+      throw error
+    }
+  })
+}
 
 // ============================================================
 // SAVE TOPICS
 // ============================================================
-// lessons.db
-//
-// TABLE:
-//
-// topics
-//   id
-//   subject_id
-//   topic_number
-//   title
-//   order_index
-//
-// IMPORTANT:
-//
-// subject must already exist before topic is inserted.
+// Subjects must already exist before topics are inserted.
 // ============================================================
 
-export async function saveTopics(
-  topics: any[]
-) {
+export async function saveTopics(topics: any[]) {
+  return runSequentially("lessons", async () => {
+    if (!Array.isArray(topics) || topics.length === 0) {
+      console.warn("⚠️ No topics received")
+      return 0
+    }
 
-  return runSequentially(
-    async () => {
+    const db = await getLessonsDB()
 
-      if (
-        !Array.isArray(topics) ||
-        topics.length === 0
-      ) {
-
-        console.warn(
-          "⚠️ No topics received"
-        )
-
-        return 0
-      }
-
-
-      const db =
-        await getLessonsDB()
-
-
-      console.log("")
-      console.log("========================================")
-      console.log("📑 SAVING TOPICS")
-      console.log("========================================")
-      console.log(
-        `📦 Received: ${topics.length}`
-      )
-
-
-      let savedCount = 0
-      let skippedCount = 0
+    try {
+      const subjectIds = await selectIds(db, "SELECT id FROM subjects")
+      let skipped = 0
       const rows: any[][] = []
 
+      for (const topic of topics) {
+        const row = buildTopicRow(topic)
 
-      try {
-        const existingSubjects = await db.select<
-          { id: string }[]
-        >("SELECT id FROM subjects")
-        const subjectIds = new Set(
-          existingSubjects.map((subject) => normalizeId(subject.id))
-        )
-
-        for (
-          const topic of topics
-        ) {
-
-          const id =
-            getTopicRecordId(topic)
-
-
-          if (!id) {
-
-            console.warn(
-              "⚠️ Topic skipped - missing ID:",
-              topic
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          const subjectId =
-            getSubjectId(topic)
-
-
-          if (!subjectId) {
-
-            console.warn(
-              "⚠️ Topic skipped - missing subject_id:",
-              {
-                id,
-                title: topic?.title
-              }
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-          if (!subjectIds.has(subjectId)) {
-            console.warn(
-              "⚠️ Topic skipped - subject does not exist in lessons.db:",
-              { id, subjectId }
-            )
-            skippedCount++
-            continue
-          }
-
-
-          const title =
-            topic?.title ??
-            topic?.name ??
-            ""
-
-          const cleanTitle = cleanText(title)
-          if (!cleanTitle) {
-
-            console.warn(
-              "⚠️ Topic skipped - missing title:",
-              id
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          const topicNumber =
-            topic?.topic_number ??
-            topic?.topicNumber ??
-            null
-
-
-          const orderIndex = cleanOrderIndex(
-            topic?.order_index ??
-            topic?.orderIndex
-          )
-
-
-          rows.push([
-            id,
-            subjectId,
-            topicNumber,
-            cleanTitle,
-            orderIndex
-          ])
-
-
-          console.log(
-            `📑 Topic saved: ${cleanTitle}`
-          )
+        if (!row) {
+          skipped++
+          continue
         }
 
+        if (!subjectIds.has(String(row[1]))) {
+          console.warn("⚠️ Topic skipped - subject does not exist in lessons.db:", {
+            id: row[0],
+            subjectId: row[1],
+          })
+          skipped++
+          continue
+        }
 
-        await executeRowsInBatches(
-          db,
-          "topics",
-          ["id", "subject_id", "topic_number", "title", "order_index"],
-          rows
-        )
-        savedCount = rows.length
-
-
-        console.log("")
-        console.log(
-          `✅ TOPICS SAVED: ${savedCount}/${topics.length}`
-        )
-
-        console.log(
-          `⚠️ TOPICS SKIPPED: ${skippedCount}`
-        )
-
-
-        return savedCount
-
-
-      } catch (error) {
-
-        console.error(
-          "❌ TOPIC SAVE ERROR:",
-          error
-        )
-
-
-        throw error
+        rows.push(row)
       }
-    }
-  )
-}
 
+      await executeRowsInBatches(db, "topics", TOPIC_COLUMNS, rows)
+      console.log(`✅ TOPICS SAVED: ${rows.length}/${topics.length} (skipped ${skipped})`)
+      return rows.length
+    } catch (error) {
+      console.error("❌ TOPIC SAVE ERROR:", error)
+      throw error
+    }
+  })
+}
 
 // ============================================================
 // SAVE LESSONS
 // ============================================================
-// lessons.db
-//
-// TABLE:
-//
-// lessons
-//   id
-//   topic_id
-//   subject_id
-//   topic_number
-//   slug
-//   title
-//   summary
-//   blocks
-//   search_text
-//   order_index
-//
-// IMPORTANT:
-//
-// topic_id is NOT NULL.
-//
-// Therefore we refuse to insert a lesson without a topic.
+// topic_id is NOT NULL, so a lesson without an existing topic
+// is skipped.
 // ============================================================
 
-export async function saveLearning(
-  lessons: any[]
-) {
+export async function saveLearning(lessons: any[]) {
+  return runSequentially("lessons", async () => {
+    if (!Array.isArray(lessons) || lessons.length === 0) {
+      console.warn("⚠️ No lessons received")
+      return 0
+    }
 
-  return runSequentially(
-    async () => {
+    const db = await getLessonsDB()
 
-      if (
-        !Array.isArray(lessons) ||
-        lessons.length === 0
-      ) {
-
-        console.warn(
-          "⚠️ No lessons received"
-        )
-
-        return 0
-      }
-
-
-      const db =
-        await getLessonsDB()
-
-
-      console.log("")
-      console.log("========================================")
-      console.log("📖 SAVING LESSONS")
-      console.log("========================================")
-      console.log(
-        `📦 Received: ${lessons.length}`
+    try {
+      const existingTopics = await db.select(
+        "SELECT id, subject_id FROM topics"
+      ) as { id: string; subject_id: string }[]
+      const topicSubjects = new Map(
+        existingTopics.map((topic) => [
+          normalizeId(topic.id),
+          normalizeId(topic.subject_id),
+        ])
       )
+      const subjectIds = await selectIds(db, "SELECT id FROM subjects")
 
-
-      let savedCount = 0
-      let skippedCount = 0
+      let skipped = 0
       const rows: any[][] = []
 
-
-      try {
-        const existingTopics = await db.select<
-          { id: string; subject_id: string }[]
-        >("SELECT id, subject_id FROM topics")
-        const topicSubjects = new Map(
-          existingTopics.map((topic) => [
-            normalizeId(topic.id),
-            normalizeId(topic.subject_id)
-          ])
-        )
-        const existingSubjects = await db.select<
-          { id: string }[]
-        >("SELECT id FROM subjects")
-        const subjectIds = new Set(
-          existingSubjects.map((subject) => normalizeId(subject.id))
-        )
-
-
-        for (
-          const lesson of lessons
-        ) {
-
-          // ----------------------------------------------------
-          // ID
-          // ----------------------------------------------------
-
-          const id =
-            getLessonRecordId(lesson)
-
-
-          if (!id) {
-
-            console.warn(
-              "⚠️ Lesson skipped - missing ID:",
-              lesson
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          // ----------------------------------------------------
-          // TOPIC ID
-          // ----------------------------------------------------
-
-          const topicId =
-            getTopicId(lesson)
-
-
-          if (!topicId) {
-
-            console.warn(
-              "⚠️ Lesson skipped - missing topic_id:",
-              {
-                id,
-                title: lesson?.title,
-                topic_id: lesson?.topic_id,
-                topicId: lesson?.topicId,
-                topic: lesson?.topic
-              }
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-          const subjectId =
-            getSubjectId(lesson)
-
+      for (const lesson of lessons) {
+        const row = buildLessonRow(lesson, (topicId, subjectId) => {
           const topicSubjectId = topicSubjects.get(topicId)
-          if (!topicSubjectId) {
-            console.warn(
-              "⚠️ Lesson skipped - topic does not exist in lessons.db:",
-              { id, topicId }
-            )
-            skippedCount++
-            continue
-          }
 
-          if (subjectId && subjectId !== topicSubjectId) {
-            console.warn(
-              "⚠️ Lesson skipped - topic belongs to a different subject:",
-              { id, topicId, subjectId, topicSubjectId }
-            )
-            skippedCount++
-            continue
-          }
+          if (!topicSubjectId) return null
+          if (subjectId && subjectId !== topicSubjectId) return null
+          if (!subjectIds.has(topicSubjectId)) return null
 
-          if (!subjectIds.has(topicSubjectId)) {
-            console.warn(
-              "⚠️ Lesson skipped - topic references a missing subject:",
-              { id, topicId, subjectId: topicSubjectId }
-            )
-            skippedCount++
-            continue
-          }
+          return subjectId || topicSubjectId
+        })
 
-          const resolvedSubjectId = subjectId || topicSubjectId
-
-          // ----------------------------------------------------
-          // SUBJECT ID
-          // ----------------------------------------------------
-
-          // ----------------------------------------------------
-          // TITLE
-          // ----------------------------------------------------
-
-          const title =
-            lesson?.title ??
-            lesson?.name ??
-            ""
-
-          const cleanTitle = cleanText(title)
-          if (!cleanTitle) {
-
-            console.warn(
-              "⚠️ Lesson skipped - missing title:",
-              id
-            )
-
-            skippedCount++
-
-            continue
-          }
-
-
-          // ----------------------------------------------------
-          // OTHER FIELDS
-          // ----------------------------------------------------
-
-          const topicNumber =
-            lesson?.topic_number ??
-            lesson?.topicNumber ??
-            null
-
-
-          const slug =
-            cleanText(lesson?.slug)
-
-          if (!slug) {
-            console.warn(
-              "⚠️ Lesson skipped - missing slug:",
-              id
-            )
-            skippedCount++
-            continue
-          }
-
-          const summary =
-            cleanText(lesson?.summary)
-
-          const blocks = serializeBlocks(lesson?.blocks)
-          const teachingScore = scoreLessonForSelfStudy(
-            cleanTitle,
-            summary,
-            blocks
-          )
-
-          const searchText =
-            cleanText(
-              lesson?.search_text ??
-              lesson?.searchText
-            )
-
-
-          const orderIndex = cleanOrderIndex(
-            lesson?.order_index ??
-            lesson?.orderIndex
-          )
-
-
-          // ----------------------------------------------------
-          // INSERT LESSON
-          // ----------------------------------------------------
-
-          rows.push([
-            id,
-            topicId,
-            resolvedSubjectId,
-            topicNumber,
-            slug,
-            cleanTitle,
-            summary,
-            blocks,
-            searchText,
-            orderIndex,
-            teachingScore.score,
-            teachingScore.level,
-            JSON.stringify(teachingScore.feedback)
-          ])
-
-
-          console.log(
-            `📖 Lesson saved: ${cleanTitle}`
-          )
+        if (!row) {
+          skipped++
+          continue
         }
 
-
-        const lessonSaveResult = await saveLessonRows(
-          db,
-          [
-            "id",
-            "topic_id",
-            "subject_id",
-            "topic_number",
-            "slug",
-            "title",
-            "summary",
-            "blocks",
-            "search_text",
-            "order_index",
-            "teaching_score",
-            "teaching_level",
-            "teaching_feedback"
-          ],
-          rows
-        )
-        savedCount = lessonSaveResult.saved
-        skippedCount += lessonSaveResult.skipped
-
-
-        console.log("")
-        console.log("========================================")
-        console.log("✅ LESSON SAVE COMPLETE")
-        console.log("========================================")
-        console.log(
-          `📖 Saved: ${savedCount}`
-        )
-        console.log(
-          `⚠️ Skipped: ${skippedCount}`
-        )
-        console.log(
-          `📦 Received: ${lessons.length}`
-        )
-        console.log("========================================")
-
-
-        return savedCount
-
-
-      } catch (error) {
-
-        console.error(
-          "❌ LESSON SAVE ERROR:",
-          error
-        )
-
-
-        throw error
+        rows.push(row)
       }
-    }
-  )
-}
 
+      const result = await saveLessonRows(db, LESSON_COLUMNS, rows)
+      skipped += result.skipped
+
+      await rebuildLessonSearchIndex(db)
+
+      console.log(
+        `✅ LESSONS SAVED: ${result.saved}/${lessons.length} (skipped ${skipped})`
+      )
+      return result.saved
+    } catch (error) {
+      console.error("❌ LESSON SAVE ERROR:", error)
+      throw error
+    }
+  })
+}
 
 // ============================================================
 // SAVE QUESTIONS
 // ============================================================
-// questions.db
-//
-// Uses small batches to avoid SQLite parameter limits.
+// Big batches: 500 questions per INSERT (about 12,000 variables).
+// No per-row logging - console.log for every row is very slow.
 // ============================================================
 
-export async function saveQuestions(
-  questions: any[]
-) {
-
-  return runSequentially(
-    async () => {
-
-      if (
-        !Array.isArray(questions) ||
-        questions.length === 0
-      ) {
-
-        console.warn(
-          "⚠️ No questions received"
-        )
-
-        return 0
-      }
-
-
-      const db =
-        await getQuestionsDB()
-
-
-      const BATCH_SIZE = 30
-
-
-      const validQuestions =
-        questions.filter(
-          question =>
-            question &&
-            getId(question)
-        )
-
-
-      if (
-        validQuestions.length === 0
-      ) {
-
-        console.warn(
-          "⚠️ No valid questions to save"
-        )
-
-        return 0
-      }
-
-
-      let savedCount = 0
-
-
-      console.log("")
-      console.log("========================================")
-      console.log("⚡ SAVING QUESTIONS")
-      console.log("========================================")
-      console.log(
-        `📦 Received: ${questions.length}`
-      )
-      console.log(
-        `📦 Valid: ${validQuestions.length}`
-      )
-      console.log(
-        `📦 Batch size: ${BATCH_SIZE}`
-      )
-
-
-      try {
-
-        for (
-          let start = 0;
-          start < validQuestions.length;
-          start += BATCH_SIZE
-        ) {
-
-          const batch =
-            validQuestions.slice(
-              start,
-              start + BATCH_SIZE
-            )
-
-
-          const placeholders =
-            batch
-              .map(
-                () =>
-                  `(
-                    ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?
-                  )`
-              )
-              .join(",\n")
-
-
-          const values: any[] = []
-
-
-          for (
-            const question of batch
-          ) {
-
-            const explanation =
-              question?.explanation ??
-              null
-
-
-            const explanationJson =
-              explanation
-                ? JSON.stringify(
-                  explanation
-                )
-                : null
-
-
-            values.push(
-
-              // 1
-              getId(question),
-
-              // 2
-              question?.examType ??
-              question?.exam_type ??
-              null,
-
-              // 3
-              normalizeQuestionSubject(question?.subject) ??
-              null,
-
-              // 4
-              question?.year ??
-              null,
-
-              // 5
-              question?.section ??
-              null,
-
-              // 6
-              question?.topic ??
-              null,
-
-              // 7
-              question?.category ??
-              null,
-
-              // 8
-              question?.difficulty ??
-              null,
-
-              // 9
-              question?.question ??
-              null,
-
-              // 10
-              explanationJson,
-
-              // 11
-              question?.question_html ??
-              null,
-
-              // 12
-              JSON.stringify(
-                question?.options ??
-                []
-              ),
-
-              // 13
-              JSON.stringify(
-                question?.options_html ??
-                []
-              ),
-
-              // 14
-              question?.answer ??
-              null,
-
-              // 15
-              question?.solution ??
-              null,
-
-              // 16
-              question?.solution_html ??
-              null,
-
-              // 17
-              question?.imageUrl ??
-              question?.image_url ??
-              null,
-
-              // 18
-              question?.hasPassage
-                ? 1
-                : 0,
-
-              // 19
-              question?.passage ??
-              null,
-
-              // 20
-              question?.passage_html ??
-              null,
-
-              // 21
-              question?.country ??
-              null,
-
-              // 22
-              question?.institution ??
-              null,
-
-              // 23
-              question?.state ??
-              null,
-
-              // 24
-              question?.source ??
-              null
-            )
-          }
-
-
-          await db.execute(
-            `
-            INSERT OR REPLACE INTO questions
-            (
-              id,
-              examType,
-              subject,
-              year,
-              section,
-              topic,
-              category,
-              difficulty,
-              question,
-              explanation,
-              question_html,
-              options,
-              options_html,
-              answer,
-              solution,
-              solution_html,
-              imageUrl,
-              hasPassage,
-              passage,
-              passage_html,
-              country,
-              institution,
-              state,
-              source
-            )
-            VALUES ${placeholders}
-            `,
-            values
-          )
-
-
-          savedCount +=
-            batch.length
-
-
-          const percentage =
-            Math.round(
-              (
-                savedCount /
-                validQuestions.length
-              ) * 100
-            )
-
-
-          console.log(
-            `⚡ Questions: ${savedCount}/${validQuestions.length} (${percentage}%)`
-          )
-        }
-
-
-        console.log("")
-        console.log("========================================")
-        console.log(
-          `✅ SAVED ${savedCount} QUESTIONS`
-        )
-        console.log("========================================")
-
-
-        return savedCount
-
-
-      } catch (error) {
-
-        console.error(
-          "❌ QUESTION SAVE ERROR:",
-          error
-        )
-
-
-        throw error
-      }
-    }
-  )
+function questionToValues(question: any): any[] {
+  const explanation = question?.explanation ?? null
+
+  return [
+    getId(question),
+    question?.examType ?? question?.exam_type ?? null,
+    normalizeQuestionSubject(question?.subject) ?? null,
+    question?.year ?? null,
+    question?.section ?? null,
+    question?.topic ?? null,
+    question?.category ?? null,
+    question?.difficulty ?? null,
+    question?.question ?? null,
+    explanation ? JSON.stringify(explanation) : null,
+    question?.question_html ?? null,
+    JSON.stringify(question?.options ?? []),
+    JSON.stringify(question?.options_html ?? []),
+    question?.answer ?? null,
+    question?.solution ?? null,
+    question?.solution_html ?? null,
+    question?.imageUrl ?? question?.image_url ?? null,
+    question?.hasPassage ? 1 : 0,
+    question?.passage ?? null,
+    question?.passage_html ?? null,
+    question?.country ?? null,
+    question?.institution ?? null,
+    question?.state ?? null,
+    question?.source ?? null,
+  ]
 }
 
+const QUESTION_COLUMNS = [
+  "id",
+  "examType",
+  "subject",
+  "year",
+  "section",
+  "topic",
+  "category",
+  "difficulty",
+  "question",
+  "explanation",
+  "question_html",
+  "options",
+  "options_html",
+  "answer",
+  "solution",
+  "solution_html",
+  "imageUrl",
+  "hasPassage",
+  "passage",
+  "passage_html",
+  "country",
+  "institution",
+  "state",
+  "source",
+]
+
+export async function saveQuestions(questions: any[]) {
+  return runSequentially("questions", async () => {
+    if (!Array.isArray(questions) || questions.length === 0) {
+      console.warn("⚠️ No questions received")
+      return 0
+    }
+
+    const validQuestions = questions.filter(
+      (question) => question && getId(question)
+    )
+
+    if (validQuestions.length === 0) {
+      console.warn("⚠️ No valid questions to save")
+      return 0
+    }
+
+    const db = await getQuestionsDB()
+    await tuneForBulkWrite(db)
+    const rowPlaceholder = `(${QUESTION_COLUMNS.map(() => "?").join(", ")})`
+    let savedCount = 0
+
+    try {
+      for (const batch of chunk(validQuestions, QUESTION_BATCH_SIZE)) {
+        await db.execute(
+          `
+          INSERT OR REPLACE INTO questions (${QUESTION_COLUMNS.join(", ")})
+          VALUES ${batch.map(() => rowPlaceholder).join(", ")}
+          `,
+          batch.flatMap(questionToValues)
+        )
+
+        savedCount += batch.length
+      }
+
+      return savedCount
+    } catch (error) {
+      console.error("❌ QUESTION SAVE ERROR:", error)
+      throw error
+    }
+  })
+}
 
 // ============================================================
-// VERIFY LESSON DATABASE
-// ============================================================
-//
-// Use this after downloading content.
-//
-// It tells you exactly:
-//
-// subjects = ?
-// topics   = ?
-// lessons  = ?
+// VERIFY LESSON DATABASE (counts only - fast)
 // ============================================================
 
 export async function verifyLessonDatabase() {
+  return runSequentially("lessons", async () => {
+    const db = await getLessonsDB()
 
-  return runSequentially(
-    async () => {
-
-      const db =
-        await getLessonsDB()
-
-
-      console.log("")
-      console.log("========================================")
-      console.log("🔎 VERIFYING LESSON DATABASE")
-      console.log("========================================")
-
-
-      const subjects =
-        await db.select(
-          `
-          SELECT
-            id,
-            name,
-            icon,
-            description,
-            order_index
-          FROM subjects
-          ORDER BY order_index ASC
-          `
-        )
-
-
-      const topics =
-        await db.select(
-          `
-          SELECT
-            id,
-            subject_id,
-            topic_number,
-            title,
-            order_index
-          FROM topics
-          ORDER BY order_index ASC
-          `
-        )
-
-
-      const lessons =
-        await db.select(
-          `
-          SELECT
-            id,
-            topic_id,
-            subject_id,
-            topic_number,
-            slug,
-            title,
-            summary,
-            blocks,
-            search_text,
-            order_index
-          FROM lessons
-          ORDER BY order_index ASC
-          `
-        )
-
-
-      console.log(
-        `📚 Subjects: ${subjects.length}`
-      )
-
-      console.log(
-        `📑 Topics: ${topics.length}`
-      )
-
-      console.log(
-        `📖 Lessons: ${lessons.length}`
-      )
-
-
-      console.table(
-        subjects
-      )
-
-      console.table(
-        topics
-      )
-
-
-      console.log(
-        "📖 Lessons:",
-        lessons
-      )
-
-
-      console.log("========================================")
-
-
-      return {
-        subjects,
-        topics,
-        lessons
-      }
+    const count = async (table: string): Promise<number> => {
+      const rows = await db.select(`SELECT COUNT(*) AS total FROM ${table}`) as {
+        total: number
+      }[]
+      return Number(rows[0]?.total ?? 0)
     }
-  )
-}
 
+    const result = {
+      subjects: await count("subjects"),
+      topics: await count("topics"),
+      lessons: await count("lessons"),
+    }
+
+    console.log(
+      `🔎 Lesson DB -> subjects: ${result.subjects}, topics: ${result.topics}, lessons: ${result.lessons}`
+    )
+
+    return result
+  })
+}
 
 // ============================================================
 // VERIFY RELATIONSHIPS
 // ============================================================
-//
-// This checks for:
-//
-// topic without subject
-// lesson without topic
-// lesson with missing subject
-// ============================================================
 
 export async function verifyLessonRelationships() {
+  return runSequentially("lessons", async () => {
+    const db = await getLessonsDB()
 
-  return runSequentially(
-    async () => {
+    const brokenTopics = await db.select(
+      `
+      SELECT t.id, t.subject_id, t.title
+      FROM topics t
+      LEFT JOIN subjects s ON s.id = t.subject_id
+      WHERE s.id IS NULL
+      LIMIT 50
+      `
+    )
 
-      const db =
-        await getLessonsDB()
+    const brokenLessons = await db.select(
+      `
+      SELECT l.id, l.topic_id, l.subject_id, l.title
+      FROM lessons l
+      LEFT JOIN topics t ON t.id = l.topic_id
+      WHERE t.id IS NULL
+      LIMIT 50
+      `
+    )
 
+    const lessonsWithoutSubject = await db.select(
+      `
+      SELECT l.id, l.topic_id, l.subject_id, l.title
+      FROM lessons l
+      LEFT JOIN subjects s ON s.id = l.subject_id
+      WHERE l.subject_id IS NOT NULL AND s.id IS NULL
+      LIMIT 50
+      `
+    )
 
-      console.log("")
-      console.log("========================================")
-      console.log("🔗 VERIFYING LESSON RELATIONSHIPS")
-      console.log("========================================")
+    console.log(
+      `🔗 Topics without subject: ${brokenTopics.length}, lessons without topic: ${brokenLessons.length}, lessons with invalid subject: ${lessonsWithoutSubject.length}`
+    )
 
-
-      // --------------------------------------------------------
-      // TOPICS WITHOUT SUBJECTS
-      // --------------------------------------------------------
-
-      const brokenTopics =
-        await db.select(
-          `
-          SELECT
-            t.id,
-            t.subject_id,
-            t.title
-          FROM topics t
-          LEFT JOIN subjects s
-            ON s.id = t.subject_id
-          WHERE s.id IS NULL
-          `
-        )
-
-
-      // --------------------------------------------------------
-      // LESSONS WITHOUT TOPICS
-      // --------------------------------------------------------
-
-      const brokenLessons =
-        await db.select(
-          `
-          SELECT
-            l.id,
-            l.topic_id,
-            l.subject_id,
-            l.title
-          FROM lessons l
-          LEFT JOIN topics t
-            ON t.id = l.topic_id
-          WHERE t.id IS NULL
-          `
-        )
-
-
-      // --------------------------------------------------------
-      // LESSONS WITHOUT SUBJECT
-      // --------------------------------------------------------
-
-      const lessonsWithoutSubject =
-        await db.select(
-          `
-          SELECT
-            l.id,
-            l.topic_id,
-            l.subject_id,
-            l.title
-          FROM lessons l
-          LEFT JOIN subjects s
-            ON s.id = l.subject_id
-          WHERE
-            l.subject_id IS NOT NULL
-            AND s.id IS NULL
-          `
-        )
-
-
-      console.log(
-        `⚠️ Topics without subject: ${brokenTopics.length}`
-      )
-
-      console.log(
-        `⚠️ Lessons without topic: ${brokenLessons.length}`
-      )
-
-      console.log(
-        `⚠️ Lessons with invalid subject: ${lessonsWithoutSubject.length}`
-      )
-
-
-      if (
-        brokenTopics.length
-      ) {
-
-        console.table(
-          brokenTopics
-        )
-      }
-
-
-      if (
-        brokenLessons.length
-      ) {
-
-        console.table(
-          brokenLessons
-        )
-      }
-
-
-      if (
-        lessonsWithoutSubject.length
-      ) {
-
-        console.table(
-          lessonsWithoutSubject
-        )
-      }
-
-
-      console.log("========================================")
-
-
-      return {
-        brokenTopics,
-        brokenLessons,
-        lessonsWithoutSubject
-      }
-    }
-  )
+    return { brokenTopics, brokenLessons, lessonsWithoutSubject }
+  })
 }
 
-
 // ============================================================
-// COMPLETE CONTENT SAVE
-// ============================================================
-//
-// IMPORTANT:
-//
-// ALWAYS call this instead of calling all save functions
-// randomly.
-//
-// ORDER:
-//
-// 1. Subjects
-// 2. Topics
-// 3. Lessons
-// 4. Questions
-//
-// Every save finishes completely before the next starts.
+// SAVE LEARNING CONTENT / QUESTIONS / EVERYTHING
 // ============================================================
 
+export async function saveLearningContent({
+  subjects = [],
+  topics = [],
+  lessons = [],
+}: {
+  subjects?: any[]
+  topics?: any[]
+  lessons?: any[]
+}) {
+  return replaceLessonsWithLatestData({ subjects, topics, lessons })
+}
+
+export async function saveQuestionContent(questions: any[] = []) {
+  return saveQuestions(questions)
+}
+
+// Order: subjects -> topics -> lessons, THEN questions.
 export async function saveAllContent({
   subjects = [],
   topics = [],
   lessons = [],
-  questions = []
+  questions = [],
 }: {
   subjects?: any[]
   topics?: any[]
   lessons?: any[]
   questions?: any[]
 }) {
+  const learning = await saveLearningContent({ subjects, topics, lessons })
+  const questionCount = await saveQuestionContent(questions)
 
-      console.log("")
-      console.log("########################################")
-      console.log("🚀 STARTING COMPLETE CONTENT SAVE")
-      console.log("########################################")
+  const verification = await verifyLessonDatabase()
+  const relationships = await verifyLessonRelationships()
 
+  // Create the progress composable here (not at module level) so it
+  // runs inside a normal app context.
+  try {
+    const { loadLessonProgress, pruneLessonProgress } = useLessonProgress()
+    const sidebar = await platform.lesson.getSidebar()
+    loadLessonProgress()
+    pruneLessonProgress(sidebar)
+  } catch (error) {
+    console.warn("⚠️ Lesson progress cleanup skipped:", error)
+  }
 
-      // ======================================================
-      // SUBJECTS, TOPICS, LESSONS
-      // ======================================================
-
-      console.log("")
-      console.log("1️⃣ REPLACING LESSON DATASET")
-
-      const lessonDatasetResult =
-        await replaceLessonsWithLatestData({
-          subjects,
-          topics,
-          lessons,
-        })
-
-      const subjectCount = lessonDatasetResult.subjects
-      const topicCount = lessonDatasetResult.topics
-      const lessonCount = lessonDatasetResult.lessons
-
-
-      // ======================================================
-      // QUESTIONS
-      // ======================================================
-
-      console.log("")
-      console.log("4️⃣ QUESTIONS")
-
-      const questionCount =
-        await saveQuestions(
-          questions
-        )
-
-
-      // ======================================================
-      // VERIFY
-      // ======================================================
-
-      console.log("")
-      console.log("5️⃣ VERIFYING")
-
-      const verification =
-        await verifyLessonDatabase()
-
-
-      const relationships =
-        await verifyLessonRelationships()
-
-
-      // ======================================================
-      // COMPLETE
-      // ======================================================
-
-      console.log("")
-      console.log("########################################")
-      console.log("🎉 CONTENT SAVE COMPLETE")
-      console.log("########################################")
-
-      console.log(
-        `📚 Subjects saved: ${subjectCount}`
-      )
-
-      console.log(
-        `📑 Topics saved: ${topicCount}`
-      )
-
-      console.log(
-        `📖 Lessons saved: ${lessonCount}`
-      )
-
-      console.log(
-        `❓ Questions saved: ${questionCount}`
-      )
-
-      console.log("########################################")
-      const sidebar = await platform.lesson.getSidebar()
-      loadLessonProgress()
-      pruneLessonProgress(sidebar)
-
-      return {
-        subjects: subjectCount,
-        topics: topicCount,
-        lessons: lessonCount,
-        questions: questionCount,
-        verification,
-        relationships
-      }
+  return {
+    subjects: learning.subjects,
+    topics: learning.topics,
+    lessons: learning.lessons,
+    questions: questionCount,
+    verification,
+    relationships,
+  }
 }

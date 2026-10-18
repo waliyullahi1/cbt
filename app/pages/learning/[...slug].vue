@@ -1410,6 +1410,7 @@ const selectedSubject = computed(() => {
 });
 
 const currentSubjectKey = computed(() => {
+  
   return (
     selectedSubject.value?.slug ||
     routeSubjectSlug.value ||
@@ -1798,6 +1799,8 @@ const openLessonBySlug = async (
   syncSelectedTopic(slug);
 
   try {
+    console.log(slug, 'slugslugslugslugslug');
+    
     await loadLesson(slug);
 
     // A newer lesson was requested while this one was loading

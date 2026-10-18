@@ -1350,7 +1350,8 @@ export function useQuestionSearch() {
               " AND "
             )}`
           : ""
-
+            console.log(where,' wherewherewherewherewhere');
+            
 
       params.push(
         Number(limit)

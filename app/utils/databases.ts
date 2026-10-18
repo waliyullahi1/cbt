@@ -1183,6 +1183,7 @@ export function getDB(): Promise<SqlDatabase> {
 // ============================================================
 
 export function getQuestionsDB(): Promise<SqlDatabase> {
+
   if (!isSoftwareActivated()) {
     return openBundledContentDatabase("questions.db")
   }

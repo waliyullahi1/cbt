@@ -630,7 +630,7 @@ const normalizedSubjects = computed(() => {
          * English Language
          */
         name:
-          id === 'english-language'
+          id === 'engsh-lanage'
             ? 'ENGLISH LANGUAGE'
             : item.name || formatSubjectName(id),
 

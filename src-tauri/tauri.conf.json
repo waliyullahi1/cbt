@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "cbt",
+  "productName": "ExamTips",
   "version": "0.1.4",
   "identifier": "com.virex.cbt",
 

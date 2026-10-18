@@ -224,10 +224,10 @@
 
      
     </div>
-
+  {{availableSubjects}}
     <!-- SUBJECT CARD GRID -->
     <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-
+  
       <article
         v-for="(subject, index) in studySubjects"
         :key="subject.id"

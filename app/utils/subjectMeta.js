@@ -196,9 +196,7 @@ export function normalizeSubjectId(subject) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return normalized === "english"
-    ? "english-language"
-    : normalized;
+  return normalized 
 }
 
 

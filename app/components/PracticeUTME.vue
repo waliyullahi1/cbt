@@ -570,7 +570,7 @@
           </label>
         </div>
       </section>
-
+{{available}}
 
 
        <div
@@ -1086,17 +1086,35 @@ const startExam = async () => {
     let examQuestions = [];
 
     for (const subject of selectedSubjects.value) {
-      let subjectQuestions = await getQuestions({
-        subject: subject.id,
-        year: subject.year,
-        limit: subject.questions,
-      });
+      const wanted = Number(subject.questions) || 0;
 
-      if (!subjectQuestions?.length) {
-        subjectQuestions = await getQuestions({
+      // 1. Questions from the selected year first
+      let subjectQuestions =
+        (await getQuestions({
           subject: subject.id,
-          limit: subject.questions,
-        });
+          year: subject.year,
+          limit: wanted,
+        })) ?? [];
+
+      // 2. Not enough? Borrow the missing ones from other years
+      if (subjectQuestions.length < wanted) {
+        const missing = wanted - subjectQuestions.length;
+        const haveIds = new Set(
+          subjectQuestions.map((q) => String(q.id ?? q._id))
+        );
+
+        // Ask for extra rows, because some results may be questions we already have
+        const extra =
+          (await getQuestions({
+            subject: subject.id,
+            limit: wanted + subjectQuestions.length,
+          })) ?? [];
+
+        const borrowed = extra
+          .filter((q) => !haveIds.has(String(q.id ?? q._id)))
+          .slice(0, missing);
+
+        subjectQuestions = [...subjectQuestions, ...borrowed];
       }
 
       if (shuffleQuestions.value) {
@@ -1186,7 +1204,7 @@ onMounted(() => {
     selectedSubjects.value = savedSubjects.map((subject) =>
       normalizeSubjectId(subject.id ?? subject.subject ?? subject.name) ===
       "english-language"
-        ? { ...subject, id: "english-language", name: "ENGLISH LANGUAGE" }
+        ? { ...subject, id: "english-language", name: "English Language" }
         : subject
     );
 
