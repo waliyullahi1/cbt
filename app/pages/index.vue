@@ -409,18 +409,9 @@
           <!-- PROFILE (placeholder until you build the page) -->
           <div
             v-else-if="appState.currentPage === 'PROFILE'"
-            class="flex min-h-full w-full flex-col items-center justify-center gap-3 p-6 text-center"
+            class="min-h-full w-full max-w-full min-w-0 overflow-x-hidden"
           >
-            <Icon name="lucide:user-round" class="h-12 w-12 text-[#1A66F5]" />
-            <p class="text-lg font-bold text-[#0A2A66]">Profile</p>
-            <p class="text-sm text-[#5B6E8F]">This page is not ready yet.</p>
-            <button
-              type="button"
-              class="rounded-full bg-[#0B63F6] px-5 py-2 text-sm font-semibold text-white"
-              @click="closeBook"
-            >
-              Back to home
-            </button>
+         <UserProfile @gohome="closeBook" />
           </div>
         </section>
 

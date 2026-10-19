@@ -273,7 +273,7 @@
               type="button"
               @click="closeModal"
               class="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 sm:px-4"
-            >
+            > 
               Cancel
             </button>
 

@@ -23,7 +23,7 @@
               id="bookmark-title"
               class="flex-1 text-center text-base font-medium tracking-wide sm:text-lg"
             >
-              Bookmark
+              Bookmarks
             </h2>
 
             <button

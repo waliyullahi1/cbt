@@ -18,7 +18,7 @@
 
                 <div class="flex min-w-0 flex-1 items-center gap-2.5">
                   
-                  <span class="truncate text-[15px] font-bold tracking-tight">
+                  <span class="truncate text-base font-medium tracking-[0.15px]">
                     Exam Preparation
                   </span>
                 </div>
@@ -31,7 +31,7 @@
               </div>
             </header>
     <!-- MAIN CONTENT -->
-    <main class="min-h-0 flex-1 overflow-y-hidden  p-2 pb-24 pt-2 sm:px-3">
+    <main class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-24 pt-2 sm:px-3">
       <!-- HERO BANNER -->
       <section
         class="relative mb-3 overflow-hidden flex justify-between rounded-sm bg-primary p-3 text-white shadow-sm"
@@ -45,19 +45,19 @@
             </div>
 
             <span
-              class="sm:text-[10px] text-[9px] font-semibold uppercase tracking-wide text-indigo-300"
+              class="text-[11px] font-medium uppercase tracking-[0.5px] text-indigo-300"
             >
               Exam Preparation
             </span>
           </div>
 
           <h1
-            class="  text-lg font-semibold leading-tight sm:text-2xl"
+            class="  text-lg font-medium leading-tight sm:text-2xl"
           >
             Choose your subjects,
           </h1>
 
-          <p class="sm:mt-1 mt-0 text-[9px] sm:text-[11px] leading-relaxed text-indigo-200">
+          <p class="sm:mt-1 mt-0 text-[11px] leading-4 text-indigo-200">
             Choose your subjects, customize your practice, and prepare for
             success.
           </p>
@@ -65,7 +65,7 @@
           <button
             type="button"
             @click="openSubjectModal"
-            class="sm:mt-3 mt-1 flex items-center sm:gap-1.5 rounded-sm bg-white sm:px-3 px-2 py-1 sm:py-2 text-[11px] font-semibold text-[#1e1b4b] shadow-sm transition active:scale-95"
+            class="sm:mt-3 mt-1 flex items-center sm:gap-1.5 rounded-sm bg-white sm:px-3 px-2 py-1 sm:py-2 text-xs font-medium tracking-[0.1px] text-[#1e1b4b] shadow-sm transition active:brightness-90"
           >
             <Icon name="lucide:plus" class="sm:h-3.5 h-2 w-2 sm:w-3.5" />
             Select Subjects
@@ -106,11 +106,11 @@
 
          
           <div class="  space-y-0.5">
-            <span class="text-[10px] font-semibold text-indigo-900"> Selected </span>
-            <p class="text-lg font-bold leading-none text-gray-900">
+            <span class="text-[11px] font-medium tracking-[0.5px] text-indigo-900"> Selected </span>
+            <p class="text-lg font-medium leading-none text-gray-900">
             {{ selectedSubjects.length }}
           </p>
-            <p class="text-[10px] font-semibold text-indigo-900">Subjects</p>
+            <p class="text-[11px] font-medium tracking-[0.5px] text-indigo-900">Subjects</p>
           </div>
          </div>
           <div class="flex  place-content-end  items-center  justify-end rounded-sm bg-indigo-50 ">
@@ -130,11 +130,11 @@
 
          
             <div class="  space-y-0.5">
-              <span class="text-[10px] font-semibold text-indigo-900"> Selected </span>
-              <p class="text-lg font-bold leading-none text-gray-900">
+              <span class="text-[11px] font-medium tracking-[0.5px] text-indigo-900"> Selected </span>
+              <p class="text-lg font-medium leading-none text-gray-900">
               {{ totalQuestions }}
             </p>
-              <p class="text-[10px] font-semibold text-indigo-900">Questions</p>
+              <p class="text-[11px] font-medium tracking-[0.5px] text-indigo-900">Questions</p>
             </div>
           </div>
           <div class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-sm  ">
@@ -154,14 +154,14 @@
               <Icon name="lucide:file-text" class="h-3.5 w-3.5" />
             </div>
 
-            <span class="text-[10px] font-medium text-gray-400"> Total </span>
+            <span class="text-[11px] font-medium text-gray-400"> Total </span>
           </div>
 
-          <p class="text-xl font-semibold leading-none text-gray-900">
+          <p class="text-xl font-medium leading-none text-gray-900">
             {{ totalQuestions }}
           </p>
 
-          <p class="mt-1 text-[11px] text-gray-500">Questions</p>
+          <p class="mt-1 text-xs text-gray-500">Questions</p>
         </div>
       </section>
 
@@ -174,9 +174,9 @@
       <!-- SECTION TITLE -->
       <section class="mb-2 flex items-center justify-between">
         <div class="min-w-0">
-          <h2 class="text-sm font-semibold text-gray-900">Your Subjects</h2>
+          <h2 class="text-base font-medium tracking-[0.15px] text-gray-900">Your Subjects</h2>
 
-          <p class="mt-0.5 text-[10px] text-gray-500">
+          <p class="mt-0.5 text-xs tracking-[0.4px] text-gray-500">
             Customize each subject before starting.
           </p>
         </div>
@@ -184,7 +184,7 @@
         <button
           type="button"
           @click="openSubjectModal"
-          class="text-[13px] font-semibold text-indigo-600"
+          class="text-sm font-medium tracking-[0.1px] text-indigo-600"
         >
           + Add
         </button>
@@ -201,23 +201,23 @@
           <Icon name="lucide:book-open" class="h-5 w-5" />
         </div>
 
-        <h3 class="text-xs font-semibold text-gray-900">No subjects found</h3>
+        <h3 class="text-sm font-medium tracking-[0.1px] text-gray-900">No subjects found</h3>
 
-        <p class="mt-1 text-[11px] text-gray-500">
+        <p class="mt-1 text-xs tracking-[0.4px] text-gray-500">
           Select a subject or change your search.
         </p>
 
         <button
           type="button"
           @click="openSubjectModal"
-          class="mt-3 rounded-sm bg-indigo-600 px-3 py-2 text-[11px] font-semibold text-white active:scale-95"
+          class="mt-3 rounded-sm bg-indigo-600 px-3 py-2 text-xs font-medium tracking-[0.1px] text-white active:brightness-90"
         >
           Select Subject
         </button>
       </section>
 
       <!-- SUBJECT CARDS -->
-      <section v-else class="space-y-2 gap-3 grid grid-cols-1 sm:grid-cols-3">
+      <section v-else class=" gap-3 grid grid-cols-1 sm:grid-cols-3">
         <article
           v-for="subject in filteredSubjects"
           :key="subject.id"
@@ -239,7 +239,7 @@
             <div class="min-w-0 flex-1">
               <div class="flex bg-pr items-start justify-between gap-1.5">
                 <div class="min-w-0">
-                  <h3 class="truncate text-sm font-semibold text-gray-900">
+                  <h3 class="truncate text-sm font-medium tracking-[0.1px] text-gray-900">
                     {{ subject.name }}
                   </h3>
 
@@ -258,14 +258,14 @@
 
               <div class="mt-1.5 hidden flex-wrap items-center gap-1.5">
                 <span
-                  class="flex items-center gap-1 rounded-sm bg-emerald-50 px-1.5 py-1 text-[10px] font-medium text-emerald-700"
+                  class="flex items-center gap-1 rounded-sm bg-emerald-50 px-1.5 py-1 text-[11px] font-medium text-emerald-700"
                 >
                   <Icon name="lucide:check-circle" class="h-2.5 w-2.5" />
                   Selected
                 </span>
 
                 <span
-                  class="flex items-center gap-1 rounded-sm bg-gray-50 px-1.5 py-1 text-[10px] font-medium text-gray-500"
+                  class="flex items-center gap-1 rounded-sm bg-gray-50 px-1.5 py-1 text-[11px] font-medium text-gray-500"
                 >
                   <Icon name="lucide:file-text" class="h-2.5 w-2.5" />
                   {{ subject.questions }} Questions
@@ -280,7 +280,7 @@
               <!-- YEAR -->
               <div class="min-w-0">
                 <label
-                  class="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400"
+                  class="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.5px] text-gray-400"
                 >
                   <Icon name="lucide:calendar-days" class="h-3 w-3" />
                   Year
@@ -289,7 +289,7 @@
                 <div class="relative">
                   <select
                     v-model="subject.year"
-                    class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-1 pr-6 text-sm font-medium text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
+                    class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-1.5 pr-6 text-sm font-normal text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
                   >
                     <option value="all">All Years</option>
 
@@ -312,7 +312,7 @@
               <!-- QUESTION COUNT -->
               <div class="min-w-0">
                 <label
-                  class="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400"
+                  class="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.5px] text-gray-400"
                 >
                   <Icon name="lucide:list-ordered" class="h-3 w-3" />
                   Questions
@@ -321,7 +321,7 @@
                 <div class="relative">
                   <select
                     v-model="subject.questions"
-                    class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-2 pr-6 text-[11px] font-medium text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
+                    class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-1.5 pr-6 text-sm font-normal text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
                   >
                     <option
                       v-for="number in subject.questionOptions"
@@ -355,13 +355,13 @@
 
                 <div class="min-w-0">
                   <p
-                    class="text-[10px] font-semibold uppercase tracking-wide text-gray-400"
+                    class="text-[11px] font-medium uppercase tracking-[0.5px] text-gray-400"
                   >
                     Topics
                   </p>
 
                   <p
-                    class="mt-0.5 truncate text-[10px] font-medium text-gray-700"
+                    class="mt-0.5 truncate text-xs font-normal text-gray-700"
                   >
                     {{ getTopicLabel(subject) }}
                   </p>
@@ -369,7 +369,7 @@
               </div>
 
               <div class="flex items-center gap-1 text-indigo-500">
-                <span class="text-[10px] font-semibold"> Edit </span>
+                <span class="text-xs font-medium tracking-[0.1px]"> Edit </span>
 
                 <Icon name="lucide:chevron-right" class="h-3.5 w-3.5" />
               </div>
@@ -390,11 +390,11 @@
           </div>
 
           <div class="min-w-0">
-            <h3 class="text-[11px] font-semibold text-gray-900">
+            <h3 class="text-xs font-medium tracking-[0.1px] text-gray-900">
               Student Profile
             </h3>
 
-            <p class="text-[10px] text-gray-400">
+            <p class="text-xs text-gray-400">
               Save your name for your practice session.
             </p>
           </div>
@@ -405,7 +405,7 @@
           type="text"
           list="students"
           placeholder="Enter your name"
-          class="w-full rounded-sm border border-gray-200 bg-gray-50 px-2.5 py-2 text-[11px] font-medium text-gray-700 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-500/10"
+          class="w-full rounded-sm border border-gray-200 bg-gray-50 px-2.5 py-2 text-sm font-normal text-gray-700 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-500/10"
         />
 
         <datalist id="students">
@@ -433,9 +433,9 @@
             </div>
 
             <div class="min-w-0 text-left">
-              <h3 class="text-xs font-semibold text-gray-900">Exam Settings</h3>
+              <h3 class="text-sm font-medium tracking-[0.1px] text-gray-900">Exam Settings</h3>
 
-              <p class="mt-0.5 text-[10px] text-gray-500">
+              <p class="mt-0.5 text-xs tracking-[0.4px] text-gray-500">
                 {{ examModeLabel }} · {{ formatDurationLabel(examDuration) }}
               </p>
             </div>
@@ -453,7 +453,7 @@
         >
           <!-- MODE -->
           <div>
-            <label class="mb-1.5 block text-[11px] font-semibold text-gray-700">
+            <label class="mb-1.5 block text-xs font-medium tracking-[0.5px] text-gray-700">
               Examination Mode
             </label>
 
@@ -463,7 +463,7 @@
                 :key="mode.value"
                 type="button"
                 @click="examMode = mode.value"
-                class="rounded-sm border px-1.5 py-2 text-[10px] font-semibold transition"
+                class="rounded-sm border px-1.5 py-2 text-xs font-medium tracking-[0.1px] transition"
                 :class="
                   examMode === mode.value
                     ? 'border-indigo-600 bg-indigo-600 text-white'
@@ -477,16 +477,16 @@
 
           <!-- DURATION -->
           <div>
-            <label class="mb-1.5 block text-[11px] font-semibold text-gray-700">
+            <label class="mb-1.5 block text-xs font-medium tracking-[0.5px] text-gray-700">
               Exam Duration
             </label>
 
             <div class="grid grid-cols-2 gap-2">
-              <label class="text-[10px] font-medium text-gray-500">
+              <label class="text-xs font-medium tracking-[0.4px] text-gray-500">
                 Hours
                 <select
                   v-model.number="examDurationHours"
-                  class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
+                  class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-sm font-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
                 >
                   <option v-for="hour in durationHours" :key="hour" :value="hour">
                     {{ String(hour).padStart(2, "0") }} hr
@@ -494,11 +494,11 @@
                 </select>
               </label>
 
-              <label class="text-[10px] font-medium text-gray-500">
+              <label class="text-xs font-medium tracking-[0.4px] text-gray-500">
                 Minutes
                 <select
                   v-model.number="examDurationMinutes"
-                  class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
+                  class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-sm font-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
                 >
                   <option
                     v-for="minute in durationMinutes"
@@ -510,7 +510,7 @@
                 </select>
               </label>
             </div>
-            <p class="mt-1 text-[10px] text-gray-500">
+            <p class="mt-1 text-xs tracking-[0.4px] text-gray-500">
               Duration: {{ formatDurationLabel(examDuration) }}
             </p>
           </div>
@@ -527,11 +527,11 @@
               </div>
 
               <div class="min-w-0">
-                <p class="text-[11px] font-semibold text-gray-700">
+                <p class="text-sm font-medium tracking-[0.1px] text-gray-700">
                   Shuffle Questions
                 </p>
 
-                <p class="text-[10px] text-gray-400">Randomize question order</p>
+                <p class="text-xs tracking-[0.4px] text-gray-400">Randomize question order</p>
               </div>
             </div>
 
@@ -554,11 +554,11 @@
               </div>
 
               <div class="min-w-0">
-                <p class="text-[11px] font-semibold text-gray-700">
+                <p class="text-sm font-medium tracking-[0.1px] text-gray-700">
                   Shuffle Options
                 </p>
 
-                <p class="text-[10px] text-gray-400">Randomize answer choices</p>
+                <p class="text-xs tracking-[0.4px] text-gray-400">Randomize answer choices</p>
               </div>
             </div>
 
@@ -579,7 +579,7 @@
         <button
           type="button"
           @click="openInstructions"
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-gray-200 bg-gray-50 text-gray-500 transition active:scale-95"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-gray-200 bg-gray-50 text-gray-500 transition active:bg-gray-200"
           title="Exam instructions"
         >
           <Icon name="lucide:info" class="h-4 w-4" />
@@ -589,7 +589,7 @@
           type="button"
           @click="startExam"
           :disabled="isStarting"
-          class="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-sm bg-primary px-2 text-xs font-semibold text-white shadow-sm transition hover:bg-primary/95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          class="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-sm bg-primary px-2 text-sm font-medium tracking-[0.1px] text-white shadow-sm transition hover:bg-primary/95 active:brightness-125 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Icon
             :name="isStarting ? 'lucide:loader-circle' : 'lucide:play'"
@@ -634,7 +634,7 @@
                 <Icon name="lucide:info" class="h-4 w-4" />
               </div>
 
-              <h2 class="text-sm font-semibold text-gray-900">
+              <h2 class="text-base font-medium tracking-[0.15px] text-gray-900">
                 Exam Instructions
               </h2>
             </div>
@@ -650,7 +650,7 @@
 
           <div class="space-y-2.5">
             <p
-              class="flex items-start gap-2 text-[11px] leading-relaxed text-gray-600"
+              class="flex items-start gap-2 text-sm leading-5 tracking-[0.25px] text-gray-600"
             >
               <Icon
                 name="lucide:check-circle"
@@ -660,7 +660,7 @@
             </p>
 
             <p
-              class="flex items-start gap-2 text-[11px] leading-relaxed text-gray-600"
+              class="flex items-start gap-2 text-sm leading-5 tracking-[0.25px] text-gray-600"
             >
               <Icon
                 name="lucide:calendar-days"
@@ -670,7 +670,7 @@
             </p>
 
             <p
-              class="flex items-start gap-2 text-[11px] leading-relaxed text-gray-600"
+              class="flex items-start gap-2 text-sm leading-5 tracking-[0.25px] text-gray-600"
             >
               <Icon
                 name="lucide:clock"
@@ -680,7 +680,7 @@
             </p>
 
             <p
-              class="flex items-start gap-2 text-[11px] leading-relaxed text-gray-600"
+              class="flex items-start gap-2 text-sm leading-5 tracking-[0.25px] text-gray-600"
             >
               <Icon
                 name="lucide:shuffle"
@@ -693,7 +693,7 @@
           <button
             type="button"
             @click="showInstructions = false"
-            class="mt-4 w-full rounded-sm bg-[#4f46e5] py-2.5 text-xs font-semibold text-white transition active:scale-[0.98]"
+            class="mt-4 w-full rounded-sm bg-[#4f46e5] py-2.5 text-sm font-medium tracking-[0.1px] text-white transition active:brightness-90"
           >
             Got It
           </button>
@@ -1224,7 +1224,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap");
+
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
