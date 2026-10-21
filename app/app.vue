@@ -45,7 +45,7 @@
 
      <div
     v-else 
-    class="mt- ea h-dvh w-dvw overflow-hidden"
+    class="pt-[env(safe-area-inset-top)] h-dvh w-dvw overflow-hidden"
   >
     <NuxtLayout>
       <NuxtPage />

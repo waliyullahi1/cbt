@@ -7,7 +7,7 @@
 :root {
   --font-app: Roboto, -apple-system, BlinkMacSystemFont, "SF Pro Text",
               system-ui, "Segoe UI", sans-serif;
-
+--app-safe-top: env(safe-area-inset-top, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -42,7 +42,7 @@ body {
   margin: 0;
   /* Top only. Bottom padding on body does nothing for a fixed nav bar,
      it only leaves an empty strip, so it was removed. */
-  padding-top: env(safe-area-inset-top, 0px);
+
 }
 
 button, input, select, textarea {

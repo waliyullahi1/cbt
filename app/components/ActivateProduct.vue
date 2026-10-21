@@ -32,7 +32,7 @@
 
     <header
 
-      class="relative z-10 shrink-0 bg-[#0B2F6B] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_16px_rgba(11,47,107,0.25)]"
+      class="relative z-10 shrink-0 bg-[#0B2F6B]  text-white "
 
     >
 

@@ -428,14 +428,14 @@
               :key="tab.key"
               type="button"
               :class="[
-                'relative flex flex-col items-center justify-center gap-0. text-[12px] font-medium transition-colors',
+                'relative flex flex-col items-center justify-center gap-0.5 text-[12px] font-medium transition-colors',
                 activeTab === tab.key ? 'text-[#0B63F6]' : 'text-[#5B6E8F]',
               ]"
               @click="goToTab(tab)"
             >
               <Icon
-                :name="tab.icon"
-                :class="['h-5 w-5', activeTab === tab.key ? 'text-[#0B63F6]' : '']"
+                :name="activeTab === tab.key ? tab.iconActive : tab.icon"
+                class="h-5 w-5"
               />
               {{ tab.label }}
               <span
@@ -651,15 +651,34 @@ const menuItems = [
 // ============================================================
 
 const tabs = [
-  { key: "HOME", label: "Home", icon: "lucide:house", component: "" },
-  { key: "CLASS", label: "Learn", icon: "lucide:book-open", component: "CLASS" },
+  {
+    key: "HOME",
+    label: "Home",
+    icon: "lucide:house",
+    iconActive: "ph:house-fill",
+    component: "",
+  },
+  {
+    key: "CLASS",
+    label: "Learn",
+    icon: "lucide:book-open",
+    iconActive: "ph:book-open-fill",
+    component: "CLASS",
+  },
   {
     key: "RESULTS",
     label: "Results",
-    icon: "lucide:chart-no-axes-column",
+    icon: "ph:chart-bar",
+    iconActive: "ph:chart-bar-fill",
     component: "RESULTS",
   },
-  { key: "PROFILE", label: "Profile", icon: "lucide:user", component: "PROFILE" },
+  {
+    key: "PROFILE",
+    label: "Profile",
+    icon: "lucide:user",
+    iconActive: "ph:user-fill",
+    component: "PROFILE",
+  },
 ]
 
 const activeTab = computed(() =>

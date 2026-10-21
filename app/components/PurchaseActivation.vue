@@ -28,11 +28,12 @@ const props = defineProps({
         accountNumber: '0223489006',
         accountName: 'Waheed Ambali'
       },
-      {
-        bankName: 'Zenith Bank',
-        accountNumber: '1014381194',
+       {
+        bankName: 'Opay',
+        accountNumber: '7068393706',
         accountName: 'Waheed Ambali'
-      }
+      },
+      
     ]
   }
 })

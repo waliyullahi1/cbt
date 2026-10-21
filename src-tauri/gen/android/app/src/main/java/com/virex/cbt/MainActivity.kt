@@ -3,6 +3,7 @@ package com.virex.cbt
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
@@ -27,18 +28,11 @@ class MainActivity : TauriActivity() {
 
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-  }
 
-  override fun onWebViewCreate(webView: WebView) {
-    super.onWebViewCreate(webView)
-
-    // Removes the white or black flash while the page is loading
-    webView.setBackgroundColor(0xFFEEF5FF.toInt())
-    webView.addJavascriptInterface(SplashBridge(), "SplashBridge")
-
-    // Keep the page out from under the status bar, the gesture/navigation bar,
-    // the camera cut-out and the keyboard
-    ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+    // Push the whole app below the status bar and above the navigation
+    // bar / gesture bar, the camera cut-out and the keyboard
+    val content = findViewById<View>(android.R.id.content)
+    ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
       val bars = insets.getInsets(
         WindowInsetsCompat.Type.systemBars() or
           WindowInsetsCompat.Type.displayCutout() or
@@ -47,6 +41,14 @@ class MainActivity : TauriActivity() {
       view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
       WindowInsetsCompat.CONSUMED
     }
-    ViewCompat.requestApplyInsets(webView)
+    ViewCompat.requestApplyInsets(content)
+  }
+
+  override fun onWebViewCreate(webView: WebView) {
+    super.onWebViewCreate(webView)
+
+    // Removes the white or black flash while the page is loading
+    webView.setBackgroundColor(0xFFEEF5FF.toInt())
+    webView.addJavascriptInterface(SplashBridge(), "SplashBridge")
   }
 }
