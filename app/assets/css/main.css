@@ -26,7 +26,19 @@ body,
   min-height: 100dvh; /* visible height on phones; 100vh can be taller */
   margin: 0;
 }
-
+*{
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea  [ contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+button,  select, a {
+  touch-action: manipulation; /* prevents double-tap zoom on iOS */
+}
 html {
   scroll-behavior: smooth;
 }
@@ -75,7 +87,19 @@ button, input, select, textarea {
   box-sizing: border-box;
   padding-bottom: var(--nav-safe-bottom);
 }
+.question-content :deep(.katex),
+.question-section :deep(.katex),
+span :deep(.katex) {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
 
+.question-content :deep(.katex-display) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
 /* Put on the scrollable page content so the last items
    (like the "Start Exam" button) never hide behind the nav bar */
 .page-bottom-space {

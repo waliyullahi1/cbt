@@ -53,7 +53,7 @@
               class="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#14316d] to-[#2c5bc4] text-xl font-medium tracking-[1px] text-white shadow-md ring-4 ring-[#e3ebff]"
               aria-hidden="true"
             >
-              {{ initials }}
+              {{ initials }} 
             </div>
 
             <!-- View mode -->

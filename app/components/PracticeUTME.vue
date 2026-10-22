@@ -34,7 +34,7 @@
     <main class="min-h-0 flex-1 overflow-y-auto oversroll-contain  pb-24  sm:px-0">
       <!-- HERO BANNER -->
       <section
-        class="relative mb-4 flex justify-between overflow-hidden rounded-2xl bg-primary p-4 text-white shadow-md sm:p-5"
+        class="relative mb-4 mx-2 flex justify-between overflow-hidden rounded-2xl bg-primary p-2 text-white shadow-md sm:p-5"
       >
         <div class="relative z-10 max-w-[85%]">
           <div class="sm:mb-2 mb-1 flex items-center gap-1.5">

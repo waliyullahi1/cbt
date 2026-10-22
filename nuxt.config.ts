@@ -98,14 +98,14 @@ export default defineNuxtConfig({
 
   nitro: { preset: "static" },
 
-  css: ["~/assets/css/main.css"],
+  css: ["~/assets/css/main.css", 'katex/dist/katex.min.css'],
   app: {
     head: {
       meta: [
         {
           name: "viewport",
           // viewport-fit=cover is required for env(safe-area-inset-*) to work
-          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+          content: "width=device-width, initial-scale=1,  maximum-scale=1, user-scalable=no, viewport-fit=cover",
         },
       ],
     },

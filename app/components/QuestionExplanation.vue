@@ -98,8 +98,8 @@
           </div>
 
           <div
-            class="simple-explanation-content text-sm leading-6 text-blue-900/80"
-            v-html="question.explanation.simplifiedExplanation"
+            class="mistake-content text-sm font-semibold leading-6 text-gray-800"
+  v-html="renderMath(mistake.mistake)"
           />
         </div>
 
@@ -162,8 +162,9 @@
                     </span>
 
                     <div
-                      class="why-wrong-content mt-1 text-sm leading-6 text-gray-600"
-                      v-html="mistake.whyWrong"
+                        class="why-wrong-content mt-1 text-sm leading-6 text-gray-600"
+                      v-html="renderMath(mistake.whyWrong)"
+
                     />
                   </div>
                 </div>
@@ -280,7 +281,7 @@ const hasExplanation = computed(() => {
 */
 
 const explanationText = computed(() => {
-  return explanation.value?.explanation || ""
+  return renderMath(explanation.value?.explanation || "")
 })
 
 /*
@@ -337,7 +338,23 @@ const commonMistakes = computed(() => {
 .why-wrong-content :deep(p) {
   margin-bottom: 0.75rem;
 }
+.explanation-content :deep(.katex),
+.simple-explanation-content :deep(.katex),
+.mistake-content :deep(.katex),
+.why-wrong-content :deep(.katex) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
 
+.explanation-content :deep(.katex-display),
+.simple-explanation-content :deep(.katex-display),
+.mistake-content :deep(.katex-display),
+.why-wrong-content :deep(.katex-display) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
 .explanation-content :deep(p:last-child),
 .simple-explanation-content :deep(p:last-child),
 .mistake-content :deep(p:last-child),

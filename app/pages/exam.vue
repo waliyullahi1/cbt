@@ -933,17 +933,15 @@ const getQuestionClass = (question, index) => {
               />
 
               <div
-                v-if="currentQuestion?.section"
+                v-html="renderMath(currentQuestion.section)"
                 class="question-section"
-                v-html="currentQuestion.section"
+               
               ></div>
 
               <div
                 class="question-content"
                 v-html="
-                  currentQuestion?.question ||
-                  currentQuestion?.text ||
-                  'Question not available'
+                 renderMath(currentQuestion?.question || currentQuestion?.text || 'Question not available')
                 "
               ></div>
 
@@ -992,15 +990,9 @@ const getQuestionClass = (question, index) => {
                   <!-- text -->
                   <span
                     class="min-w-0 flex-1 break-words text-[15px] leading-snug text-[#201F22] sm:text-base"
-                    :class="
-                      optionState(key) === 'correct' ||
-                      optionState(key) === 'wrong'
-                        ? 'font-bold'
-                        : 'font-normal'
-                    "
-                  >
-                    {{ value }}
-                  </span>
+                    :class="optionState(key) === 'correct' || optionState(key) === 'wrong' ? 'font-bold' : 'font-normal'"
+                    v-html="renderMath(value)"
+                  ></span>
 
                   <!-- status -->
                   <Icon
