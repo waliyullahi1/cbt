@@ -176,7 +176,7 @@
 
                 <!-- QUESTION COUNT -->
                 <span
-                  class="mt-0.5 block text-[10px] font-medium text-slate-400 sm:text-xs"
+                  class="mt-0.5 block hidden text-[10px] font-medium text-slate-400 sm:text-xs"
                 >
                   {{ formatNumber(subject.questionCount) }}
                   {{ subject.questionCount === 1 ? countLabel.slice(0, -1) : countLabel }}

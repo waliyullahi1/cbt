@@ -931,7 +931,7 @@ const getQuestionClass = (question, index) => {
                 class="mb-3 max-h-64 max-w-full rounded-2xl object-contain"
                 alt="Question image"
               />
-
+            
               <div
                 v-html="renderMath(currentQuestion.section)"
                 class="question-section"

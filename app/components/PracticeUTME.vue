@@ -1,699 +1,547 @@
 <template>
-  <div
-    class="flex h-full  sm:pt-0 min-h-0 w-full flex-col overflow-hidden sm:bg-[#f7f8fc] bg-[#f5f6fa] text-[#1b1b1f] font-['Roboto','Arial',sans-serif]"
-  >
+<div
+  class="absolute inset-0 flex min-h-0 w-full flex-col overflow-hidden bg-[#f4f5f9] font-['Roboto','Arial',sans-serif] text-[#1b1b1f]"
+>
+    <!-- MOBILE HEADER -->
+    <header
+      class="sticky top-0 z-20 block shrink-0 border-b border-gray-200 bg-white text-gray-900 sm:hidden"
+    >
+      <div class="flex h-14 items-center gap-2 px-3">
+        <button
+          type="button"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-primary/10 p-1 active:bg-primary/20"
+          aria-label="Open menu"
+          @click="menuOpen = true"
+        >
+          <img src="/images/logos.svg" alt="" />
+        </button>
 
-            <header
-              class="sticky top-0 z-20 shrink-0 border-b border-gray-200/80 bg-white/95 text-gray-900 backdrop-blur sm:hidden block"
-            >
-              <div class="flex min-h-14 items-center gap-2 px-3">
-                <button
-                  type="button"
-                  class="flex h-9 p-0.5 w-9 bg-primary/10 shadow-[0_2px_8px_rgba(20,49,109,0.09)] rounded-full bg-primry   shrink-0 items-center justify-center  active:bg-white/10"
-                  aria-label="Open menu"
-                  @click="menuOpen = true"
-                >
-                 <img src="/images/logos.svg"   class="  "  >
-                </button>
+        <span class="min-w-0 flex-1 truncate text-base font-medium">
+          Exam Preparation
+        </span>
 
-                <div class="flex min-w-0 flex-1 items-center gap-2.5">
-                  
-                  <span class="truncate text-[clamp(0.9375rem,3.8vw,1.125rem)] font-medium tracking-[0.15px]">
-                    Exam Preparation
-                  </span>
-                </div>
+        <button
+          type="button"
+          class="flex h-9 w-9 items-center justify-center rounded-sm text-gray-700 active:bg-gray-100"
+          aria-label="Go home"
+          @click="goHome"
+        >
+          <Icon name="lucide:house" class="h-5 w-5" />
+        </button>
+      </div>
+    </header>
 
-               <button type="button" class="  text-gray-700" @click="goHome" aria-label="Go home">
-                <Icon name="lucide:house" class=" text-[clamp(1.25rem,5vw,1.5rem)]" />
-              </button>
-
-               
-              </div>
-            </header>
     <!-- MAIN CONTENT -->
-    <main class="min-h-0 flex-1 overflow-y-auto oversroll-contain  pb-24  sm:px-0">
-      <!-- HERO BANNER -->
-      <section
-        class="relative mb-4 mx-2 flex justify-between overflow-hidden rounded-2xl bg-primary p-2 text-white shadow-md sm:p-5"
-      >
-        <div class="relative z-10 max-w-[85%]">
-          <div class="sm:mb-2 mb-1 flex items-center gap-1.5">
-            <div
-              class="flex h-6 w-6 items-center justify-center rounded-xl bg-white/10"
-            >
-              <Icon name="lucide:graduation-cap" class="h-3.5 w-3.5" />
-            </div>
-
-            <span
-              class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium uppercase tracking-[0.5px] text-indigo-300"
-            >
-              Exam Preparation
-            </span>
-          </div>
-
-          <h1
-            class="  text-[clamp(1.125rem,4.5vw,1.375rem)] font-medium leading-tight sm:text-2xl"
-          >
-            Choose your subjects,
-          </h1>
-
-          <p class="sm:mt-1 mt-0 text-[clamp(0.6875rem,2.7vw,0.75rem)] leading-4 text-indigo-200">
-            Choose your subjects, customize your practice, and prepare for
-            success.
-          </p>
-
-          <button
-            type="button"
-            @click="openSubjectModal"
-            class="sm:mt-3 mt-1 flex items-center sm:gap-1.5 rounded-xl bg-white sm:px-3 px-2 py-1 sm:py-2 text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.1px] text-[#1e1b4b] shadow-sm transition active:brightness-90"
-          >
-            <Icon name="lucide:plus" class="sm:h-3.5 h-2 w-2 sm:w-3.5" />
-            Select Subjects
-          </button>
-        </div>
-        <div>
-           <button type="button" class=" sm:block hidden ds-header__home" @click="goHome" aria-label="Go home">
-        <Icon name="lucide:house" class=" text-[clamp(1.25rem,5vw,1.5rem)]" />
-      </button>
-        </div>
-
-        <!-- Decorative Illustration -->
-        <div
-          class="pointer-events-none absolute -right-4 -top-4 h-28 w-28 text-indigo-300 opacity-20"
+    <main class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div class="mx-auto w-full max-w-5xl pb-4">
+        <!-- HERO + STATS -->
+        <section
+          class="relative mx-2 mt-2 overflow-hidden rounded-sm bg-primary text-white sm:mx-4 sm:mt-4"
         >
-          <Icon name="lucide:graduation-cap" class="h-full w-full" />
-        </div>
-
-        <div
-          class="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-indigo-500/20 blur-2xl"
-        ></div>
-
-        <div
-          class="pointer-events-none absolute bottom-0 right-4 h-14 w-14 rounded-xl border border-white/5"
-        ></div>
-      </section>
-
-      <!-- QUICK SUMMARY -->
-      <section class="mb-4 sm:px-4 px-2 grid grid-cols-2 gap-3">
-      
-        <div class="rounded-2xl border flex justify-between    gap-2 border-gray-200 bg-indigo-50  sm:p-2.5 p-1.5 shadow-sm">
-           <div class="flex  gap-2">
-            <div
-              class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
-            >
-              <Icon name="lucide:layers-3" class="sm:h-8 sm:w-8 w-5 h-5" />
-            </div>
-
-         
-          <div class="  space-y-0.5">
-            <span class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium tracking-[0.5px] text-indigo-900"> Selected </span>
-            <p class="text-[clamp(1.125rem,4.5vw,1.375rem)] font-medium leading-none text-gray-900">
-            {{ selectedSubjects.length }}
-          </p>
-            <p class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium tracking-[0.5px] text-indigo-900">Subjects</p>
-          </div>
-         </div>
-          <div class="flex  place-content-end  items-center  justify-end rounded-xl bg-indigo-50 ">
-              <Icon name="lucide:chevron-right" class="sm: w-4 h-4" />
-          </div>
-    
-        
-        </div>
-
-        <div class="rounded-2xl border  flex justify-between   gap-2 border-gray-200 bg-emerald-50  sm:p-2.5 p-1.5 shadow-sm">
-          <div class="flex  gap-2">
-            <div
-              class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600"
-            >
-              <Icon name="lucide:file-text" class="sm:h-8 sm:w-8 w-5 h-5" />
-            </div>
-
-         
-            <div class="  space-y-0.5">
-              <span class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium tracking-[0.5px] text-indigo-900"> Selected </span>
-              <p class="text-[clamp(1.125rem,4.5vw,1.375rem)] font-medium leading-none text-gray-900">
-              {{ totalQuestions }}
-            </p>
-              <p class="text-[clamp(0.6875rem,2.7vw,0.75rem)] whitespace-nowrap font-medium tracking-[0.5px] text-indigo-900">Questions</p>
-            </div>
-          </div>
-          <div class="flex sm:h-10 sm:w-10 w-8 h-8 items-center justify-center rounded-xl  ">
-              <Icon name="lucide:chevron-right" class="w-4 h-4" />
-          </div>
-    
-        
-        </div>
-
-
-
-        <div class="rounded-2xl hidden border border-gray-200 bg-white p-2.5 shadow-sm">
-          <div class="mb-1.5 flex items-center justify-between">
-            <div
-              class="flex h-6 w-6 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"
-            >
-              <Icon name="lucide:file-text" class="h-3.5 w-3.5" />
-            </div>
-
-            <span class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium text-gray-400"> Total </span>
-          </div>
-
-          <p class="text-[clamp(1.25rem,5vw,1.5rem)] font-medium leading-none text-gray-900">
-            {{ totalQuestions }}
-          </p>
-
-          <p class="mt-1 text-[clamp(0.75rem,3vw,0.875rem)] text-gray-500">Questions</p>
-        </div>
-      </section>
-
-      <!-- SEARCH AND FILTER -->
-     
-
-      <!-- CATEGORY TABS -->
-    
-
-      <!-- SECTION TITLE -->
-      <section class="mb-2 flex sm:px-4 px-2 items-center justify-between">
-        <div class="min-w-0">
-          <h2 class="text-[clamp(0.9375rem,3.8vw,1.125rem)] font-medium tracking-[0.15px] text-gray-900">Your Subjects</h2>
-
-          <p class="mt-0.5 text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-500">
-            Customize each subject before starting.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          @click="openSubjectModal"
-          class="text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-indigo-600"
-        >
-          + Add
-        </button>
-      </section>
-
-      <!-- EMPTY STATE -->
-      <section
-        v-if="filteredSubjects.length === 0"
-        class="rounded-xl border sm:px-4 px-2 border-dashed border-gray-200 bg-white px-3 py-7 text-center"
-      >
-        <div
-          class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"
-        >
-          <Icon name="lucide:book-open" class="h-5 w-5" />
-        </div>
-
-        <h3 class="text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-gray-900">No subjects found</h3>
-
-        <p class="mt-1 text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-500">
-          Select a subject or change your search.
-        </p>
-
-        <button
-          type="button"
-          @click="openSubjectModal"
-          class="mt-3 rounded-xl bg-indigo-600 px-3 py-2 text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.1px] text-white active:brightness-90"
-        >
-          Select Subject
-        </button>
-      </section>
-
-      <!-- SUBJECT CARDS -->
-      <section v-else class="grid grid-cols-1 gap-3 sm:px-4 px-2 sm:grid-cols-2 xl:grid-cols-3">
-        <article
-          v-for="subject in filteredSubjects"
-          :key="subject.id"
-          class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_2px_10px_rgba(20,30,60,0.04)] transition"
-        >
-          <!-- CARD TOP -->
-          <div class="flex items-center gap-2.5 p-2.5">
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              :class="getSubjectColor(subject.id).bg"
-            >
-              <Icon
-                :name="getSubjectIcon(subject.id)"
-                class="h-5 w-5"
-                :class="getSubjectColor(subject.id).text"
-              />
-            </div>
-
-            <div class="min-w-0 flex-1">
-              <div class="flex bg-pr items-start justify-between gap-1.5">
-                <div class="min-w-0">
-                  <h3 class="truncate text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-gray-900">
-                    {{ subject.name }}
-                  </h3>
-
-                
-                </div>
-
-                <button
-                  type="button"
-                  @click="removeSubject(subject)"
-                  class="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                  title="Remove subject"
-                >
-                  <Icon name="lucide:x" class="h-4 w-4" />
-                </button>
-              </div>
-
-              <div class="mt-1.5 hidden flex-wrap items-center gap-1.5">
-                <span
-                  class="flex items-center gap-1 rounded-xl bg-emerald-50 px-1.5 py-1 text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium text-emerald-700"
-                >
-                  <Icon name="lucide:check-circle" class="h-2.5 w-2.5" />
-                  Selected
-                </span>
-
-                <span
-                  class="flex items-center gap-1 rounded-xl bg-gray-50 px-1.5 py-1 text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium text-gray-500"
-                >
-                  <Icon name="lucide:file-text" class="h-2.5 w-2.5" />
-                  {{ subject.questions }} Questions
+          <div class="relative z-10 flex items-start justify-between gap-3 p-3 sm:p-5">
+            <div class="min-w-0">
+              <div class="mb-1 flex items-center gap-1.5 text-indigo-200">
+                <Icon name="lucide:graduation-cap" class="h-3.5 w-3.5" />
+                <span class="text-[11px] font-medium uppercase tracking-wider">
+                  Exam Preparation
                 </span>
               </div>
-            </div>
-          </div>
 
-          <!-- CARD SETTINGS -->
-          <div class="border-t border-gray-100 bg-[#fafbff] p-3 sm:p-4">
-            <div class="grid grid-cols-2 gap-2">
-              <!-- YEAR -->
-              <div class="min-w-0">
-                <label
-                  class="mb-1 flex items-center gap-1 text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium uppercase tracking-[0.5px] text-gray-400"
-                >
-                  <Icon name="lucide:calendar-days" class="h-3 w-3" />
-                  Year
-                </label>
+              <h1 class="text-lg font-medium leading-tight sm:text-2xl">
+                Build your practice exam
+              </h1>
 
-                <div class="relative">
-                  <select
-                    v-model="subject.year"
-                    class="w-full appearance-none rounded-xl border border-gray-200 bg-white px-2 py-1.5 pr-6 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-normal text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
-                  >
-                    <option value="all">All Years</option>
+              <p class="mt-0.5 text-xs leading-4 text-indigo-100/90 sm:text-sm">
+                Pick your subjects, tune the settings, then start.
+              </p>
 
-                    <option
-                      v-for="year in getSubjectDetails(subject)?.years || []"
-                      :key="year"
-                      :value="year"
-                    >
-                      {{ year }}
-                    </option>
-                  </select>
-
-                  <Icon
-                    name="lucide:chevron-down"
-                    class="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
-                  />
-                </div>
-              </div>
-
-              <!-- QUESTION COUNT -->
-              <div class="min-w-0">
-                <label
-                  class="mb-1 flex items-center gap-1 text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium uppercase tracking-[0.5px] text-gray-400"
-                >
-                  <Icon name="lucide:list-ordered" class="h-3 w-3" />
-                  Questions
-                </label>
-
-                <div class="relative">
-                  <select
-                    v-model="subject.questions"
-                    class="w-full appearance-none rounded-xl border border-gray-200 bg-white px-2 py-1.5 pr-6 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-normal text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/10"
-                  >
-                    <option
-                      v-for="number in subject.questionOptions"
-                      :key="number"
-                      :value="number"
-                    >
-                      {{ number }} Questions
-                    </option>
-                  </select>
-
-                  <Icon
-                    name="lucide:chevron-down"
-                    class="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
-                  />
-                </div>
-              </div>
+              <button
+                type="button"
+                class="mt-3 inline-flex items-center gap-1.5 rounded-sm bg-white px-3 py-1.5 text-xs font-medium text-[#1e1b4b] transition active:brightness-90 sm:text-sm"
+                @click="openSubjectModal"
+              >
+                <Icon name="lucide:plus" class="h-3.5 w-3.5" />
+                Select Subjects
+              </button>
             </div>
 
-            <!-- TOPIC SELECTOR -->
             <button
               type="button"
-              @click="openTopicModal(subject)"
-              class="mt-2  hidden w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-2 py-2 text-left transition active:bg-gray-50"
+              class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-white/10 transition hover:bg-white/20 sm:flex"
+              aria-label="Go home"
+              @click="goHome"
             >
-              <div class="flex min-w-0 items-center gap-2">
-                <div
-                  class="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"
-                >
-                  <Icon name="lucide:folder-open" class="h-3.5 w-3.5" />
-                </div>
-
-                <div class="min-w-0">
-                  <p
-                    class="text-[clamp(0.6875rem,2.7vw,0.75rem)] font-medium uppercase tracking-[0.5px] text-gray-400"
-                  >
-                    Topics
-                  </p>
-
-                  <p
-                    class="mt-0.5 truncate text-[clamp(0.75rem,3vw,0.875rem)] font-normal text-gray-700"
-                  >
-                    {{ getTopicLabel(subject) }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-1 text-indigo-500">
-                <span class="text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.1px]"> Edit </span>
-
-                <Icon name="lucide:chevron-right" class="h-3.5 w-3.5" />
-              </div>
+              <Icon name="lucide:house" class="h-5 w-5" />
             </button>
           </div>
-        </article>
-      </section>
 
-      <!-- USER PROFILE -->
-      <section
-        class="mt-3 hidden rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm"
-      >
-        <div class="mb-2 flex items-center gap-1.5">
-          <div
-            class="flex h-6 w-6 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500"
-          >
-            <Icon name="lucide:user-round" class="h-3.5 w-3.5" />
-          </div>
-
-          <div class="min-w-0">
-            <h3 class="text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.1px] text-gray-900">
-              Student Profile
-            </h3>
-
-            <p class="text-[clamp(0.75rem,3vw,0.875rem)] text-gray-400">
-              Save your name for your practice session.
-            </p>
-          </div>
-        </div>
-
-        <input
-          v-model="appState.currentsuser"
-          type="text"
-          list="students"
-          placeholder="Enter your name"
-          class="w-full rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-normal text-gray-700 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-1 focus:ring-indigo-500/10"
-        />
-
-        <datalist id="students">
-          <option
-            v-for="user in appState.users || []"
-            :key="user"
-            :value="user"
-          />
-        </datalist>
-      </section>
-   
-
-      <!-- EXAM SETTINGS -->
-      <section class="mt-3 sm:px-4 px-2">
-        <button
-          type="button"
-          @click="showSettings = !showSettings"
-          class="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm"
-        >
-          <div class="flex min-w-0 items-center gap-2">
-            <div
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"
-            >
-              <Icon name="lucide:settings-2" class="h-4 w-4" />
+          <!-- stats strip -->
+          <div class="relative z-10 grid grid-cols-2 border-t border-white/15 bg-black/10">
+            <div class="flex items-center gap-2 px-3 py-2 sm:px-5">
+              <Icon name="lucide:layers-3" class="h-4 w-4 text-indigo-200" />
+              <p class="text-sm">
+                <span class="text-base font-medium">{{ selectedSubjects.length }}</span>
+                <span class="ml-1 text-xs text-indigo-100">Subjects</span>
+              </p>
             </div>
 
-            <div class="min-w-0 text-left">
-              <h3 class="text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-gray-900">Exam Settings</h3>
-
-              <p class="mt-0.5 text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-500">
-                {{ examModeLabel }} · {{ formatDurationLabel(examDuration) }}
+            <div class="flex items-center gap-2 border-l border-white/15 px-3 py-2 sm:px-5">
+              <Icon name="lucide:file-text" class="h-4 w-4 text-emerald-200" />
+              <p class="text-sm">
+                <span class="text-base font-medium">{{ totalQuestions }}</span>
+                <span class="ml-1 text-xs text-indigo-100">Questions</span>
               </p>
             </div>
           </div>
 
-          <Icon
-            :name="showSettings ? 'lucide:chevron-up' : 'lucide:chevron-down'"
-            class="h-4 w-4 shrink-0 text-gray-400"
-          />
-        </button>
+          <!-- decoration -->
+          <div
+            class="pointer-events-none absolute -right-4 -top-4 h-28 w-28 text-indigo-300 opacity-15"
+          >
+            <Icon name="lucide:graduation-cap" class="h-full w-full" />
+          </div>
+        </section>
 
-        <div
-          v-if="showSettings"
-          class="mt-1.5 space-y-2.5 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm"
+        <!-- SECTION TITLE -->
+        <section class="mt-4 flex items-end justify-between px-2 sm:px-4">
+          <div class="min-w-0">
+            <h2 class="text-base font-medium text-gray-900">Your Subjects</h2>
+            <p class="text-xs text-gray-500">Customize each subject before starting.</p>
+          </div>
+
+          <button
+            type="button"
+            class="flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-medium text-indigo-600 active:bg-indigo-50"
+            @click="openSubjectModal"
+          >
+            <Icon name="lucide:plus" class="h-3.5 w-3.5" />
+            Add
+          </button>
+        </section>
+
+        <!-- EMPTY STATE -->
+        <section
+          v-if="filteredSubjects.length === 0"
+          class="mx-2 mt-2 rounded-sm border border-dashed border-gray-300 bg-white px-3 py-8 text-center sm:mx-4"
         >
-          <!-- MODE -->
-          <div>
-            <label class="mb-1.5 block text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.5px] text-gray-700">
-              Examination Mode
-            </label>
+          <div
+            class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-sm bg-indigo-50 text-indigo-500"
+          >
+            <Icon name="lucide:book-open" class="h-5 w-5" />
+          </div>
 
-            <div class="grid grid-cols-3 gap-1.5">
-              <button
-                v-for="mode in examModes"
-                :key="mode.value"
-                type="button"
-                @click="examMode = mode.value"
-                class="rounded-xl border px-1.5 py-2 text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.1px] transition"
-                :class="
-                  examMode === mode.value
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                    : 'border-gray-200 bg-gray-50 text-gray-500'
-                "
+          <h3 class="text-sm font-medium text-gray-900">No subjects yet</h3>
+          <p class="mt-1 text-xs text-gray-500">Select a subject to get started.</p>
+
+          <button
+            type="button"
+            class="mt-3 rounded-sm bg-indigo-600 px-3 py-2 text-xs font-medium text-white active:brightness-90"
+            @click="openSubjectModal"
+          >
+            Select Subject
+          </button>
+        </section>
+
+        <!-- SUBJECT CARDS -->
+        <section
+          v-else
+          class="mt-2 grid grid-cols-1 gap-2 px-2 sm:grid-cols-2 sm:gap-3 sm:px-4 xl:grid-cols-3"
+        >
+          <article
+            v-for="subject in filteredSubjects"
+            :key="subject.id"
+            class="overflow-hidden rounded-sm border border-gray-200 bg-white"
+          >
+            <!-- card header -->
+            <div class="flex items-center gap-2.5 p-2.5">
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm"
+                :class="getSubjectColor(subject.id).bg"
               >
-                {{ mode.label }}
+                <Icon
+                  :name="getSubjectIcon(subject.id)"
+                  class="h-5 w-5"
+                  :class="getSubjectColor(subject.id).text"
+                />
+              </div>
+
+              <div class="min-w-0 flex-1">
+                <h3 class="truncate text-sm font-medium text-gray-900">
+                  {{ subject.name }}
+                </h3>
+                <p class="text-[11px] text-gray-500">
+                  {{ subject.questions }} questions ·
+                  {{ subject.year === "all" ? "All years" : subject.year }}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                title="Remove subject"
+                @click="removeSubject(subject)"
+              >
+                <Icon name="lucide:x" class="h-4 w-4" />
               </button>
             </div>
+
+            <!-- card settings -->
+            <div class="border-t border-gray-100 bg-[#fafbff] p-2.5">
+              <div class="grid grid-cols-2 gap-2">
+                <!-- year -->
+                <div class="min-w-0">
+                  <label
+                    class="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-gray-400"
+                  >
+                    <Icon name="lucide:calendar-days" class="h-3 w-3" />
+                    Year
+                  </label>
+
+                  <div class="relative">
+                    <select
+                      v-model="subject.year"
+                      class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-1.5 pr-6 text-sm text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/20"
+                    >
+                      <option value="all">All Years</option>
+                      <option
+                        v-for="year in getSubjectDetails(subject)?.years || []"
+                        :key="year"
+                        :value="year"
+                      >
+                        {{ year }}
+                      </option>
+                    </select>
+
+                    <Icon
+                      name="lucide:chevron-down"
+                      class="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <!-- question count -->
+                <div class="min-w-0">
+                  <label
+                    class="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-gray-400"
+                  >
+                    <Icon name="lucide:list-ordered" class="h-3 w-3" />
+                    Questions
+                  </label>
+
+                  <div class="relative">
+                    <select
+                      v-model="subject.questions"
+                      class="w-full appearance-none rounded-sm border border-gray-200 bg-white px-2 py-1.5 pr-6 text-sm text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500/20"
+                    >
+                      <option
+                        v-for="number in subject.questionOptions"
+                        :key="number"
+                        :value="number"
+                      >
+                        {{ number }} Questions
+                      </option>
+                    </select>
+
+                    <Icon
+                      name="lucide:chevron-down"
+                      class="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- topics -->
+              <button
+                type="button"
+                class="mt-2 flex w-full items-center justify-between gap-2 rounded-sm border border-gray-200 bg-white px-2 py-2 text-left transition active:bg-gray-50"
+                @click="openTopicModal(subject)"
+              >
+                <div class="flex min-w-0 items-center gap-2">
+                  <Icon name="lucide:folder-open" class="h-4 w-4 shrink-0 text-indigo-500" />
+
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                      Topics
+                    </p>
+                    <p class="truncate text-xs text-gray-700">
+                      {{ getTopicLabel(subject) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex shrink-0 items-center gap-1">
+                  <span
+                    v-if="!isSubscribed"
+                    class="flex items-center gap-1 whitespace-nowrap rounded-sm bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-600"
+                  >
+                    <Icon name="lucide:lock" class="h-3 w-3" />
+                    Pro
+                  </span>
+
+                  <span v-else class="text-xs font-medium text-indigo-600">Edit</span>
+
+                  <Icon name="lucide:chevron-right" class="h-3.5 w-3.5 text-gray-400" />
+                </div>
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <!-- USER PROFILE (hidden for now) -->
+        <section
+          class="mx-2 mt-3 hidden rounded-sm border border-gray-200 bg-white p-2.5 sm:mx-4"
+        >
+          <div class="mb-2 flex items-center gap-1.5">
+            <Icon name="lucide:user-round" class="h-4 w-4 text-indigo-500" />
+            <div class="min-w-0">
+              <h3 class="text-sm font-medium text-gray-900">Student Profile</h3>
+              <p class="text-xs text-gray-400">Save your name for your practice session.</p>
+            </div>
           </div>
 
-          <!-- DURATION -->
-          <div>
-            <label class="mb-1.5 block text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.5px] text-gray-700">
-              Exam Duration
+          <input
+            v-model="appState.currentsuser"
+            type="text"
+            list="students"
+            placeholder="Enter your name"
+            class="w-full rounded-sm border border-gray-200 bg-gray-50 px-2.5 py-2 text-sm text-gray-700 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+
+          <datalist id="students">
+            <option v-for="user in appState.users || []" :key="user" :value="user" />
+          </datalist>
+        </section>
+
+        <!-- EXAM SETTINGS -->
+        <section class="mt-3 px-2 sm:px-4">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between rounded-sm border border-gray-200 bg-white p-2.5"
+            @click="showSettings = !showSettings"
+          >
+            <div class="flex min-w-0 items-center gap-2.5">
+              <div
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-indigo-50 text-indigo-600"
+              >
+                <Icon name="lucide:settings-2" class="h-4 w-4" />
+              </div>
+
+              <div class="min-w-0 text-left">
+                <h3 class="text-sm font-medium text-gray-900">Exam Settings</h3>
+                <p class="text-xs text-gray-500">
+                  {{ examModeLabel }} · {{ formatDurationLabel(examDuration) }}
+                </p>
+              </div>
+            </div>
+
+            <Icon
+              :name="showSettings ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+              class="h-4 w-4 shrink-0 text-gray-400"
+            />
+          </button>
+
+          <div
+            v-if="showSettings"
+            class="mt-1 space-y-3 rounded-sm border border-gray-200 bg-white p-3"
+          >
+            <!-- mode -->
+            <div>
+              <label class="mb-1.5 block text-xs font-medium text-gray-700">
+                Examination Mode
+              </label>
+
+              <div class="grid grid-cols-3 rounded-sm bg-gray-100 p-0.5">
+                <button
+                  v-for="mode in examModes"
+                  :key="mode.value"
+                  type="button"
+                  class="rounded-sm py-1.5 text-xs font-medium transition"
+                  :class="
+                    examMode === mode.value
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-gray-500 active:bg-white'
+                  "
+                  @click="examMode = mode.value"
+                >
+                  {{ mode.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- duration -->
+            <div>
+              <label class="mb-1.5 block text-xs font-medium text-gray-700">
+                Exam Duration
+              </label>
+
+              <div class="grid grid-cols-2 gap-2">
+                <label class="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                  Hours
+                  <select
+                    v-model.number="examDurationHours"
+                    class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-sm normal-case tracking-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
+                  >
+                    <option v-for="hour in durationHours" :key="hour" :value="hour">
+                      {{ String(hour).padStart(2, "0") }} hr
+                    </option>
+                  </select>
+                </label>
+
+                <label class="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                  Minutes
+                  <select
+                    v-model.number="examDurationMinutes"
+                    class="mt-1 w-full rounded-sm border border-gray-200 bg-gray-50 px-2 py-2 text-sm normal-case tracking-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
+                  >
+                    <option v-for="minute in durationMinutes" :key="minute" :value="minute">
+                      {{ String(minute).padStart(2, "0") }} min
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <p class="mt-1 text-xs text-gray-500">
+                Duration: {{ formatDurationLabel(examDuration) }}
+              </p>
+            </div>
+
+            <!-- shuffle questions -->
+            <label
+              class="flex cursor-pointer items-center justify-between gap-2 rounded-sm bg-gray-50 p-2"
+            >
+              <div class="flex min-w-0 items-center gap-2">
+                <Icon name="lucide:shuffle" class="h-4 w-4 shrink-0 text-indigo-600" />
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-700">Shuffle Questions</p>
+                  <p class="text-xs text-gray-400">Randomize question order</p>
+                </div>
+              </div>
+
+              <input
+                v-model="shuffleQuestions"
+                type="checkbox"
+                class="h-4 w-4 rounded-sm border-gray-300 accent-indigo-600"
+              />
             </label>
 
-            <div class="grid grid-cols-2 gap-2">
-              <label class="text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.4px] text-gray-500">
-                Hours
-                <select
-                  v-model.number="examDurationHours"
-                  class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
-                >
-                  <option v-for="hour in durationHours" :key="hour" :value="hour">
-                    {{ String(hour).padStart(2, "0") }} hr
-                  </option>
-                </select>
-              </label>
+            <!-- shuffle options -->
+            <label
+              class="flex cursor-pointer items-center justify-between gap-2 rounded-sm bg-gray-50 p-2"
+            >
+              <div class="flex min-w-0 items-center gap-2">
+                <Icon name="lucide:list-restart" class="h-4 w-4 shrink-0 text-emerald-600" />
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-700">Shuffle Options</p>
+                  <p class="text-xs text-gray-400">Randomize answer choices</p>
+                </div>
+              </div>
 
-              <label class="text-[clamp(0.75rem,3vw,0.875rem)] font-medium tracking-[0.4px] text-gray-500">
-                Minutes
-                <select
-                  v-model.number="examDurationMinutes"
-                  class="mt-1 w-full rounded-xl border border-gray-200 bg-gray-50 px-2 py-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-normal text-gray-700 outline-none focus:border-indigo-400 focus:bg-white"
-                >
-                  <option
-                    v-for="minute in durationMinutes"
-                    :key="minute"
-                    :value="minute"
-                  >
-                    {{ String(minute).padStart(2, "0") }} min
-                  </option>
-                </select>
-              </label>
-            </div>
-            <p class="mt-1 text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-500">
-              Duration: {{ formatDurationLabel(examDuration) }}
-            </p>
+              <input
+                v-model="shuffleOptions"
+                type="checkbox"
+                class="h-4 w-4 rounded-sm border-gray-300 accent-indigo-600"
+              />
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <!-- BOTTOM ACTION BAR -->
+      <div
+        class="sticky bottom-0 z-20 border-t border-gray-200 bg-white px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:px-4"
+      >
+        <div class="mx-auto flex w-full max-w-5xl items-center gap-2">
+          <button
+            type="button"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-gray-200 bg-gray-50 text-gray-500 transition active:bg-gray-200"
+            title="Exam instructions"
+            @click="openInstructions"
+          >
+            <Icon name="lucide:info" class="h-4 w-4" />
+          </button>
+
+          <div class="hidden min-w-0 shrink-0 text-xs leading-4 text-gray-500 sm:block">
+            <p class="font-medium text-gray-800">{{ totalQuestions }} questions</p>
+            <p>{{ selectedSubjects.length }} subject{{ selectedSubjects.length === 1 ? "" : "s" }}</p>
           </div>
 
-          <!-- SHUFFLE QUESTIONS -->
-          <label
-            class="flex cursor-pointer items-center justify-between rounded-xl bg-gray-50 p-2"
+          <button
+            type="button"
+            :disabled="isStarting"
+            class="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-sm bg-primary px-3 text-sm font-medium text-white transition hover:bg-primary/95 active:brightness-125 disabled:cursor-not-allowed disabled:opacity-60"
+            @click="startExam"
           >
-            <div class="flex min-w-0 items-center gap-2">
-              <div
-                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"
-              >
-                <Icon name="lucide:shuffle" class="h-3.5 w-3.5" />
-              </div>
-
-              <div class="min-w-0">
-                <p class="text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-gray-700">
-                  Shuffle Questions
-                </p>
-
-                <p class="text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-400">Randomize question order</p>
-              </div>
-            </div>
-
-            <input
-              v-model="shuffleQuestions"
-              type="checkbox"
-              class="h-3.5 w-3.5 rounded-xl border-gray-300 accent-indigo-600"
+            <Icon
+              :name="isStarting ? 'lucide:loader-circle' : 'lucide:play'"
+              class="h-4 w-4 shrink-0"
+              :class="{ 'animate-spin': isStarting }"
             />
-          </label>
 
-          <!-- SHUFFLE OPTIONS -->
-          <label
-            class="flex cursor-pointer items-center justify-between rounded-xl bg-gray-50 p-2"
-          >
-            <div class="flex min-w-0 items-center gap-2">
-              <div
-                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"
-              >
-                <Icon name="lucide:list-restart" class="h-3.5 w-3.5" />
-              </div>
+            <span class="truncate">
+              {{ isStarting ? "Preparing Exam..." : "Start Exam" }}
+            </span>
 
-              <div class="min-w-0">
-                <p class="text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-gray-700">
-                  Shuffle Options
-                </p>
-
-                <p class="text-[clamp(0.75rem,3vw,0.875rem)] tracking-[0.4px] text-gray-400">Randomize answer choices</p>
-              </div>
-            </div>
-
-            <input
-              v-model="shuffleOptions"
-              type="checkbox"
-              class="h-3.5 w-3.5 rounded-xl border-gray-300 accent-indigo-600"
-            />
-          </label>
+            <Icon v-if="!isStarting" name="lucide:arrow-right" class="h-4 w-4 shrink-0" />
+          </button>
         </div>
-      </section>
-
-
-       <div
-      class="sticky bottom-0 z-20 shrink-0 border-t border-gray-200/80 bg-white/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_18px_rgba(20,30,60,0.07)] backdrop-blur sm:px-4"
-    >
-      <div class="flex items-center gap-1.5">
-        <button
-          type="button"
-          @click="openInstructions"
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-500 transition active:bg-gray-200"
-          title="Exam instructions"
-        >
-          <Icon name="lucide:info" class="h-4 w-4" />
-        </button>
-
-        <button
-          type="button"
-          @click="startExam"
-          :disabled="isStarting"
-          class="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-white shadow-sm transition hover:bg-primary/95 active:brightness-125 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Icon
-            :name="isStarting ? 'lucide:loader-circle' : 'lucide:play'"
-            class="h-3.5 w-3.5 shrink-0"
-            :class="{ 'animate-spin': isStarting }"
-          />
-
-          <span class="truncate">
-            {{ isStarting ? "Preparing Exam..." : "Start Exam" }}
-          </span>
-
-          <Icon
-            v-if="!isStarting"
-            name="lucide:arrow-right"
-            class="h-3.5 w-3.5 shrink-0"
-          />
-        </button>
-       
       </div>
-    </div>
-
+      <div class=" h-20 sm:h-0 w-full"></div>
     </main>
 
-    <!-- FIXED BOTTOM ACTION BAR -->
-   
-    <!-- MODALS -->
+    <!-- INSTRUCTIONS MODAL -->
     <Teleport to="body">
-      <!-- INSTRUCTIONS MODAL -->
       <div
         v-if="showInstructions"
         class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-2 backdrop-blur-sm sm:items-center"
         @click.self="showInstructions = false"
       >
-        <div
-          class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl sm:p-5"
-        >
+        <div class="w-full max-w-md rounded-sm border border-gray-200 bg-white p-4 shadow-2xl sm:p-5">
           <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <div
-                class="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"
+                class="flex h-8 w-8 items-center justify-center rounded-sm bg-indigo-50 text-indigo-600"
               >
                 <Icon name="lucide:info" class="h-4 w-4" />
               </div>
 
-              <h2 class="text-[clamp(0.9375rem,3.8vw,1.125rem)] font-medium tracking-[0.15px] text-gray-900">
-                Exam Instructions
-              </h2>
+              <h2 class="text-base font-medium text-gray-900">Exam Instructions</h2>
             </div>
 
             <button
               type="button"
+              class="flex h-7 w-7 items-center justify-center rounded-sm bg-gray-100 text-gray-500 active:bg-gray-200"
               @click="showInstructions = false"
-              class="flex h-6 w-6 items-center justify-center rounded-xl bg-gray-100 text-gray-500"
             >
-              <Icon name="lucide:x" class="h-3.5 w-3.5" />
+              <Icon name="lucide:x" class="h-4 w-4" />
             </button>
           </div>
 
-          <div class="space-y-2.5">
-            <p
-              class="flex items-start gap-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] leading-5 tracking-[0.25px] text-gray-600"
-            >
-              <Icon
-                name="lucide:check-circle"
-                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500"
-              />
+          <ul class="space-y-2.5">
+            <li class="flex items-start gap-2 text-sm leading-5 text-gray-600">
+              <Icon name="lucide:check-circle" class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
               Select the subjects you want to practice.
-            </p>
+            </li>
 
-            <p
-              class="flex items-start gap-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] leading-5 tracking-[0.25px] text-gray-600"
-            >
-              <Icon
-                name="lucide:calendar-days"
-                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500"
-              />
+            <li class="flex items-start gap-2 text-sm leading-5 text-gray-600">
+              <Icon name="lucide:calendar-days" class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
               Choose your preferred year, topics, and question count.
-            </p>
+            </li>
 
-            <p
-              class="flex items-start gap-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] leading-5 tracking-[0.25px] text-gray-600"
-            >
-              <Icon
-                name="lucide:clock"
-                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-500"
-              />
+            <li class="flex items-start gap-2 text-sm leading-5 text-gray-600">
+              <Icon name="lucide:clock" class="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
               Complete the examination before the timer ends.
-            </p>
+            </li>
 
-            <p
-              class="flex items-start gap-2 text-[clamp(0.8125rem,3.3vw,0.9375rem)] leading-5 tracking-[0.25px] text-gray-600"
-            >
-              <Icon
-                name="lucide:shuffle"
-                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500"
-              />
+            <li class="flex items-start gap-2 text-sm leading-5 text-gray-600">
+              <Icon name="lucide:shuffle" class="mt-0.5 h-4 w-4 shrink-0 text-purple-500" />
               You can shuffle questions and answer options.
-            </p>
-          </div>
+            </li>
+          </ul>
 
           <button
             type="button"
+            class="mt-4 w-full rounded-sm bg-[#4f46e5] py-2.5 text-sm font-medium text-white transition active:brightness-90"
             @click="showInstructions = false"
-            class="mt-4 w-full rounded-xl bg-[#4f46e5] py-2.5 text-[clamp(0.8125rem,3.3vw,0.9375rem)] font-medium tracking-[0.1px] text-white transition active:brightness-90"
           >
             Got It
           </button>
@@ -703,40 +551,45 @@
 
     <!-- SUBJECT SELECTOR -->
     <SelectSubject
-  v-model="showSubjectModal"
-  v-model:modelSubjects="selectedSubjects"
-  :subjects="available"
-/>
+      v-model="showSubjectModal"
+      v-model:modelSubjects="selectedSubjects"
+      :subjects="available"
+    />
 
+    <!-- TOPIC SELECTOR (subscribers only) -->
+    <TopicSelector
+      v-if="activeSubject"
+      v-model="showTopicModal"
+      v-model:modelTopics="activeSubject.topics"
+      :topics="activeSubjectTopics"
+    />
 
-<!-- TOPIC SELECTOR -->
-<TopicSelector
-  v-if="activeSubject"
-  v-model="showTopicModal"
-  v-model:modelTopics="activeSubject.topics"
-  :topics="getSubjectDetails(activeSubject)?.topics || []"
-/>
+    <!-- SUBSCRIBE PROMPT -->
+    <SubscribePrompt
+      v-model="showSubscribe"
+      :message="subscribeMessage"
+      to=""
+      @subscribe="goToActivation"
+    />
   </div>
 </template>
-
-
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import subjectsdetails from "~/data/subjectdetail.js";
+import { isSoftwareActivated } from "~/composables/useSoftwareSecurity";
 import {
   durationToSeconds,
   formatDurationLabel,
   secondsToDuration,
 } from "~/utils/examTime";
-
-const { getQuestions, loadSubjects } = useQuestionSearch();
 import {
-  getSubjectMeta,
   getSubjectIcon,
   getSubjectColor,
   normalizeSubjectId,
 } from "~/utils/subjectMeta";
+
+const { getQuestions, getTopicsBySubject, loadSubjects } = useQuestionSearch();
 
 /*
 |--------------------------------------------------------------------------
@@ -750,10 +603,43 @@ const available = ref([]);
 
 /*
 |--------------------------------------------------------------------------
+| Subscription
+|--------------------------------------------------------------------------
+| Works whether isSoftwareActivated is a ref or a plain function.
+| `isSubscribed` is a reactive flag for the template (lock badge).
+|--------------------------------------------------------------------------
+*/
+
+
+// Opens the same page as the "Activate account" button on the index page
+const goToActivation = () => {
+  pendingExam.value = false; // don't open the exam after the prompt closes
+  appState.value.currentPage = "ACTIVATEPRODUCT";
+  appState.value.showSecond = true;
+};
+
+const checkSubscribed = () => {
+  try {
+    const v = isSoftwareActivated;
+    return !!(typeof v === "function" ? v() : v?.value);
+  } catch {
+    return false;
+  }
+};
+
+const isSubscribed = ref(false);
+
+const refreshSubscription = () => {
+  isSubscribed.value = checkSubscribed();
+};
+
+/*
+|--------------------------------------------------------------------------
 | UI State
 |--------------------------------------------------------------------------
 */
 
+const menuOpen = ref(false);
 const searchQuery = ref("");
 const activeCategory = ref("All");
 const showSubjectModal = ref(false);
@@ -761,7 +647,29 @@ const showTopicModal = ref(false);
 const showInstructions = ref(false);
 const showSettings = ref(false);
 const activeSubject = ref(null);
+const activeSubjectTopics = ref([]);
 const isStarting = ref(false);
+
+// Subscribe prompt
+const showSubscribe = ref(false);
+const subscribeMessage = ref(
+  "Please click the button below to subscribe and get full access."
+);
+const pendingExam = ref(false); // exam is ready, waiting for the prompt to close
+
+const openSubscribePrompt = (message) => {
+  subscribeMessage.value = message;
+  showSubscribe.value = true;
+};
+
+// When the prompt closes (Maybe later, backdrop tap, or X) open the ready exam.
+// If the user tapped Subscribe, pendingExam was cleared first, so no navigation.
+watch(showSubscribe, async (open) => {
+  if (!open && pendingExam.value) {
+    pendingExam.value = false;
+    await navigateTo("/exam");
+  }
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -805,7 +713,6 @@ const QUESTION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const getDefaultQuestions = (id) =>
   normalizeSubjectId(id) === "english-language" ? 60 : 40;
 
-// 100 marks at the default count, scaled if a different count is chosen
 const getSubjectMarks = (subject) =>
   Math.round(
     (Number(subject.questions || 0) / getDefaultQuestions(subject.id)) *
@@ -871,9 +778,8 @@ const filteredSubjects = computed(() => {
       subject.name.toLowerCase().includes(query) ||
       subject.id.toLowerCase().includes(query);
 
-    const matchesCategory =
-      activeCategory.value === "All" ||
-      getSubjectCategory(subject.id) === activeCategory.value;
+    // "All" is the only category in use right now
+    const matchesCategory = activeCategory.value === "All";
 
     return matchesSearch && matchesCategory;
   });
@@ -917,17 +823,13 @@ const examModeLabel = computed(() => {
 */
 
 const getTopicLabel = (subject) => {
-  const availableTopics = getSubjectDetails(subject)?.topics || [];
+  const count = subject.topics?.length || 0;
 
-  if (
-    !subject.topics ||
-    subject.topics.length === 0 ||
-    subject.topics.length === availableTopics.length
-  ) {
-    return "All Topics";
-  }
+  if (!isSubscribed.value) return "All Topics (Subscribe to choose)";
+  if (count === 0) return "All Topics";
+  if (count === 1) return subject.topics[0];
 
-  return `${subject.topics.length} Topics Selected`;
+  return `${count} Topics Selected`;
 };
 
 /*
@@ -982,10 +884,29 @@ const openSubjectModal = () => {
 |--------------------------------------------------------------------------
 | Topic Modal
 |--------------------------------------------------------------------------
+| Free users see the subscribe prompt. Subscribers get topics loaded from
+| the questions database, so names always match the `topic` column.
+|--------------------------------------------------------------------------
 */
 
-const openTopicModal = (subject) => {
+const openTopicModal = async (subject) => {
+  refreshSubscription();
+
+  if (!isSubscribed.value) {
+    openSubscribePrompt("Choosing topics is a subscriber feature. Subscribe to practice the topics you want.");
+    return;
+  }
+
   activeSubject.value = subject;
+
+  try {
+    const list = await getTopicsBySubject(subject.id);
+    activeSubjectTopics.value = list.map((item) => item.topic);
+  } catch (error) {
+    console.error("Failed to load topics:", error);
+    activeSubjectTopics.value = getSubjectDetails(subject)?.topics || [];
+  }
+
   showTopicModal.value = true;
 };
 
@@ -1051,6 +972,89 @@ function shuffleQuestionOptions(question) {
 
 /*
 |--------------------------------------------------------------------------
+| Question Picking Helpers
+|--------------------------------------------------------------------------
+*/
+
+const qid = (q) => String(q.id ?? q._id);
+
+const randomBetween = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+// "all" or empty = no year filter
+const yearOf = (subject) =>
+  subject.year && subject.year !== "all" ? subject.year : null;
+
+// Free users can never get past years: "all" becomes the latest year
+const freeYearOf = (subject) =>
+  yearOf(subject) ?? getSubjectDetails(subject)?.years?.at(-1) ?? null;
+
+// Round-robin over topics, 2-3 questions per visit, until wanted is reached
+const fillFromTopics = async ({ subject, topics, wanted, year, picked, usedIds }) => {
+  let activeTopics = shuffleArray(topics);
+
+  while (picked.length < wanted && activeTopics.length > 0) {
+    const stillHasQuestions = [];
+
+    for (const topic of activeTopics) {
+      if (picked.length >= wanted) break;
+
+      const take = Math.min(randomBetween(2, 3), wanted - picked.length);
+
+      const rows =
+        (await getQuestions({
+          subject: subject.id,
+          year,
+          topic,
+          limit: take + usedIds.size, // over-fetch, some may be picked already
+        })) ?? [];
+
+      const fresh = rows.filter((q) => !usedIds.has(qid(q))).slice(0, take);
+
+      for (const q of fresh) {
+        usedIds.add(qid(q));
+        picked.push(q);
+      }
+
+      if (fresh.length === take) stillHasQuestions.push(topic);
+    }
+
+    activeTopics = shuffleArray(stillHasQuestions);
+  }
+};
+
+// Subscribed: topic-spread questions, borrowing past years if still short
+const pickSubscribedQuestions = async (subject, wanted) => {
+  const picked = [];
+  const usedIds = new Set();
+
+  let topics = subject.topics?.length ? [...subject.topics] : [];
+  if (topics.length === 0) {
+    const list = await getTopicsBySubject(subject.id);
+    topics = list.map((t) => t.topic);
+  }
+
+  // Pass 1: selected year
+  await fillFromTopics({ subject, topics, wanted, year: yearOf(subject), picked, usedIds });
+
+  // Pass 2: still short, so borrow from past years
+  if (picked.length < wanted && yearOf(subject) !== null) {
+    await fillFromTopics({ subject, topics, wanted, year: null, picked, usedIds });
+  }
+
+  return picked;
+};
+
+// Free: selected year only, never add more
+const pickFreeQuestions = async (subject, wanted) =>
+  (await getQuestions({
+    subject: subject.id,
+    year: freeYearOf(subject),
+    limit: wanted,
+  })) ?? [];
+
+/*
+|--------------------------------------------------------------------------
 | Start Exam
 |--------------------------------------------------------------------------
 */
@@ -1073,6 +1077,9 @@ const startExam = async () => {
   isStarting.value = true;
 
   try {
+    refreshSubscription();
+    const subscribed = isSubscribed.value;
+
     appState.value.selectedSubjects = selectedSubjects.value;
 
     appState.value.examSettings = {
@@ -1082,39 +1089,16 @@ const startExam = async () => {
       shuffleOptions: shuffleOptions.value,
     };
 
-    let examQuestions = [];
+    const examQuestions = [];
+    let requested = 0;
 
     for (const subject of selectedSubjects.value) {
       const wanted = Number(subject.questions) || 0;
+      requested += wanted;
 
-      // 1. Questions from the selected year first
-      let subjectQuestions =
-        (await getQuestions({
-          subject: subject.id,
-          year: subject.year,
-          limit: wanted,
-        })) ?? [];
-
-      // 2. Not enough? Borrow the missing ones from other years
-      if (subjectQuestions.length < wanted) {
-        const missing = wanted - subjectQuestions.length;
-        const haveIds = new Set(
-          subjectQuestions.map((q) => String(q.id ?? q._id))
-        );
-
-        // Ask for extra rows, because some results may be questions we already have
-        const extra =
-          (await getQuestions({
-            subject: subject.id,
-            limit: wanted + subjectQuestions.length,
-          })) ?? [];
-
-        const borrowed = extra
-          .filter((q) => !haveIds.has(String(q.id ?? q._id)))
-          .slice(0, missing);
-
-        subjectQuestions = [...subjectQuestions, ...borrowed];
-      }
+      let subjectQuestions = subscribed
+        ? await pickSubscribedQuestions(subject, wanted)
+        : await pickFreeQuestions(subject, wanted);
 
       if (shuffleQuestions.value) {
         subjectQuestions = shuffleArray(subjectQuestions);
@@ -1130,16 +1114,34 @@ const startExam = async () => {
     }
 
     if (examQuestions.length === 0) {
-      alert("No questions found for the selected subjects.");
+      if (!subscribed) {
+        openSubscribePrompt("No free questions are available for this selection. Subscribe to unlock all years and topics.");
+      } else {
+        alert("No questions found for the selected subjects.");
+      }
       return;
     }
 
     appState.value.examQuestions = examQuestions;
 
+    // Free user got fewer questions than requested: show the prompt first.
+    // The exam opens when the prompt closes (see the watch on showSubscribe).
+    if (!subscribed && examQuestions.length < requested) {
+      pendingExam.value = true;
+      openSubscribePrompt(
+        `Only ${examQuestions.length} of ${requested} questions are available on the free plan. Subscribe to get the full set.`
+      );
+      return;
+    }
+
     await navigateTo("/exam");
   } catch (error) {
     console.error("Failed to start exam:", error);
-    alert("Unable to prepare the exam. Please try again.");
+    alert(
+      `Unable to prepare the exam. Please try again.${
+        error?.message ? ` Error: ${error.message}` : ""
+      }`
+    );
   } finally {
     isStarting.value = false;
   }
@@ -1197,6 +1199,8 @@ const goHome = () => {
 */
 
 onMounted(() => {
+  refreshSubscription();
+
   const savedSubjects = appState.value.selectedSubjects;
 
   if (savedSubjects?.length > 0) {
@@ -1252,11 +1256,6 @@ onMounted(() => {
     padding-right: 1.35rem;
   }
 }
-
-
-
-
-
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
