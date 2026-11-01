@@ -1,323 +1,311 @@
 <script setup>
-import { onMounted, onBeforeUnmount } from "vue"
+import { ref, computed, onMounted, onBeforeUnmount } from "vue"
 import { getCurrentWindow } from "@tauri-apps/api/window"
 import { durationToSeconds, secondsToDuration } from "~/utils/examTime"
 import { isMobileTauri } from "~/utils/isMobileTauri"
 
-const appWindow = getCurrentWindow()
 const appState = useAppState()
+const { save } = useExamHistory()
+
+// ==========================================
+// SAFE HELPERS
+// ==========================================
+
+const isTauri = () =>
+  typeof window !== "undefined" && !!window.__TAURI_INTERNALS__
+
+// Never call getCurrentWindow() outside Tauri, it throws in a browser
+let appWindow = null
+const getWindow = () => {
+  if (appWindow) return appWindow
+  if (!isTauri()) return null
+  try {
+    appWindow = getCurrentWindow()
+  } catch {
+    appWindow = null
+  }
+  return appWindow
+}
+
+// renderMath that can never break the page
+const safeRender = (value) => {
+  if (value === null || value === undefined || value === "") return ""
+  try {
+    return renderMath(String(value))
+  } catch (error) {
+    console.error("renderMath failed:", error)
+    return String(value)
+  }
+}
+
+// ==========================================
+// STATE
+// ==========================================
+
 const questionStartTime = ref(0)
-const currentSubject = ref({})
-const currentQuestion  = ref({})
-const Submitted =  ref(false)
+const currentSubject = ref(null)
+const currentQuestion = ref(null)
+const Submitted = ref(false)
+const isSubmitting = ref(false)
 const showExamReport = ref(false)
 const showSubmitModal = ref(false)
 const examHeader = ref(null)
-const { save, load, histories } = useExamHistory()
-const activeSubject = ref(
-  appState.selectedSubjects?.[0]?.id || null
-)
+const groupedSubjects = ref([])
+const activeSubject = ref(null)
+const startingDate = ref(null)
+const loadError = ref("")
 
 const showMobileQuestionList = ref(false)
-
-function openMobileQuestionList() {
-  showMobileQuestionList.value = true
-}
-
-function closeMobileQuestionList() {
-  showMobileQuestionList.value = false
-}
-const groupedSubjects = ref([])
-
-
-function startQuestionTimer() {
-  questionStartTime.value = Date.now()
-}
-function saveQuestionTime() {
-  if (!currentQuestion.value || Submitted.value) return
-
-  const seconds = Math.floor(
-    (Date.now() - questionStartTime.value) / 1000
-  )
-
-  console.log(
-    "Saving",
-    currentQuestion.value.index,
-    seconds
-  )
-
-  currentQuestion.value.timeSpent =
-    (currentQuestion.value.timeSpent || 0) + seconds
-}
-const selectSubject = (subject) => {
-  activeSubject.value = subject.id
-
-  const selectedSubject =
-    groupedSubjects.value.find(
-      item => item.id === subject.id
-    )
-  
-  currentSubject.value =  selectedSubject ?? null
-    currentQuestion.value =  currentSubject.value.questions[ currentSubject.value.currentQuestion -1 ] 
-    
-}
-const goToQuestion = (index) => {
-  try {
-    saveQuestionTime()
-
-    if (!currentSubject.value?.questions?.[index]) return
-
-    currentQuestion.value = currentSubject.value.questions[index]
-
-    currentSubject.value.currentQuestion = index + 1
-
-    startQuestionTimer()
-
-    // Close mobile question popup after selecting a question
-    showMobileQuestionList.value = false
-  } catch (error) {
-    console.log(error)
-  }
-}
-
-
 const showBookmarkModal = ref(false)
-
 const bookmarkedQuestion = ref({})
 
-const bookmarkQuestion = async () => {
-  // Use your existing bookmark function here
-  await saveBookmark(currentQuestion.value)
+const hasQuestions = computed(
+  () =>
+    groupedSubjects.value.length > 0 &&
+    !!currentSubject.value &&
+    !!currentQuestion.value
+)
 
-  // Store the exact question that was bookmarked
-  bookmarkedQuestion.value = {
-    examType:
-      currentQuestion.value.examType ||
-      examType.value ||
-      'objective',
+const openMobileQuestionList = () => (showMobileQuestionList.value = true)
+const closeMobileQuestionList = () => (showMobileQuestionList.value = false)
 
-    subject:
-      currentQuestion.value.subject ||
-      currentSubject.value?.name ||
-      currentSubject.value ||
-      'Unknown subject',
+// ==========================================
+// QUESTION TIMER
+// ==========================================
 
-    year:
-      currentQuestion.value.year ||
-      examYear.value ||
-      '',
+const startQuestionTimer = () => {
+  questionStartTime.value = Date.now()
+}
 
-    questionNumber:
-      currentQuestion.value.questionNumber ||
-      currentQuestion.value.number ||
-      currentQuestionIndex.value + 1,
+const saveQuestionTime = () => {
+  if (!currentQuestion.value || Submitted.value) return
+
+  const seconds = Math.floor((Date.now() - questionStartTime.value) / 1000)
+
+  currentQuestion.value.timeSpent =
+    (currentQuestion.value.timeSpent || 0) + Math.max(0, seconds)
+}
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+
+const setCurrent = (subject, questionNumber = 1) => {
+  const list = subject?.questions || []
+  if (!list.length) return false
+
+  const number = Math.min(Math.max(1, questionNumber), list.length)
+
+  currentSubject.value = subject
+  currentSubject.value.currentQuestion = number
+  currentQuestion.value = list[number - 1]
+  activeSubject.value = subject.id
+  return true
+}
+
+const selectSubject = (subject) => {
+  if (!subject) return
+
+  const target = groupedSubjects.value.find((item) => item.id === subject.id)
+  if (!target) return
+
+  saveQuestionTime()
+  setCurrent(target, target.currentQuestion || 1)
+  startQuestionTimer()
+}
+
+const goToQuestion = (index) => {
+  try {
+    if (!currentSubject.value?.questions?.[index]) return
+
+    saveQuestionTime()
+    setCurrent(currentSubject.value, index + 1)
+    startQuestionTimer()
+    showMobileQuestionList.value = false
+  } catch (error) {
+    console.error("goToQuestion failed:", error)
   }
-
-  // Open the modal
-  showBookmarkModal.value = true
 }
 
 const previous = () => {
-  if (currentSubject.value.currentQuestion <= 1) {
-    return
-  }
-   saveQuestionTime()
+  if (!currentSubject.value) return
+  if (currentSubject.value.currentQuestion <= 1) return
 
-  currentSubject.value.currentQuestion--
-
-  currentQuestion.value =
-    currentSubject.value.questions[
-      currentSubject.value.currentQuestion - 1
-    ]
-     startQuestionTimer()
+  saveQuestionTime()
+  setCurrent(currentSubject.value, currentSubject.value.currentQuestion - 1)
+  startQuestionTimer()
 }
 
 const next = () => {
+  if (!currentSubject.value) return
+
   saveQuestionTime()
 
-  // Still have questions in this subject
-  if (
-    currentSubject.value.currentQuestion <
-    currentSubject.value.questions.length
-  ) {
-    currentSubject.value.currentQuestion++
+  const total = currentSubject.value.questions?.length || 0
 
-    currentQuestion.value =
-      currentSubject.value.questions[
-        currentSubject.value.currentQuestion - 1
-      ]
-
+  // still questions left in this subject
+  if (currentSubject.value.currentQuestion < total) {
+    setCurrent(currentSubject.value, currentSubject.value.currentQuestion + 1)
     startQuestionTimer()
     return
   }
 
-  // ===========================
-  // Last question reached
-  // Move to next subject
-  // ===========================
-
+  // last question: move to the next subject that has questions
   const currentIndex = groupedSubjects.value.findIndex(
-    subject => subject.id === currentSubject.value.id
+    (subject) => subject.id === currentSubject.value.id
   )
 
-  const nextSubject =
-    groupedSubjects.value[currentIndex + 1]
+  const nextSubject = groupedSubjects.value
+    .slice(currentIndex + 1)
+    .find((subject) => subject.questions?.length)
 
-  if (!nextSubject) {
-    // No more subjects
-    return
-    // or submitExam()
-  }
+  if (!nextSubject) return
 
-  activeSubject.value = nextSubject.id
-  currentSubject.value = nextSubject
-  currentSubject.value.currentQuestion = 1
-  currentQuestion.value = nextSubject.questions[0]
-
+  setCurrent(nextSubject, 1)
   startQuestionTimer()
 }
 
 const isLastQuestion = computed(() => {
+  if (!currentSubject.value) return false
+
   const subjectIndex = groupedSubjects.value.findIndex(
-    s => s.id === currentSubject.value.id
+    (subject) => subject.id === currentSubject.value.id
   )
 
   return (
     subjectIndex === groupedSubjects.value.length - 1 &&
     currentSubject.value.currentQuestion >=
-      currentSubject.value.questions.length
+      (currentSubject.value.questions?.length || 0)
   )
 })
 
+// ==========================================
+// BOOKMARK
+// ==========================================
 
+const bookmarkQuestion = async () => {
+  const question = currentQuestion.value
+  if (!question) return
 
-  const questionButtonHidden = ref(false)
-const questionButtonPosition = ref({
-  right: 16,
-  bottom: 20,
-})
+  try {
+    await saveBookmark(question)
+  } catch (error) {
+    console.error("Bookmark failed:", error)
+  }
 
+  bookmarkedQuestion.value = {
+    examType: question.examType || "objective",
+    subject: question.subject || currentSubject.value?.name || "Unknown subject",
+    year: question.year || "",
+    questionNumber:
+      question.questionNumber ||
+      question.number ||
+      currentSubject.value?.currentQuestion ||
+      1,
+  }
+
+  showBookmarkModal.value = true
+}
+
+// ==========================================
+// FLOATING QUESTION BUTTON (drag)
+// ==========================================
+
+const questionButtonHidden = ref(false)
+const questionButtonPosition = ref({ right: 16, bottom: 20 })
 const isDraggingQuestionButton = ref(false)
 
-let dragStartY = 0
 let dragStartX = 0
+let dragStartY = 0
 let initialRight = 16
 let initialBottom = 20
 
-function startQuestionButtonDrag(event) {
+const startQuestionButtonDrag = (event) => {
   isDraggingQuestionButton.value = true
-
   const touch = event.touches?.[0] || event
   dragStartX = touch.clientX
   dragStartY = touch.clientY
-
   initialRight = questionButtonPosition.value.right
   initialBottom = questionButtonPosition.value.bottom
 }
 
-function moveQuestionButtonDrag(event) {
+const moveQuestionButtonDrag = (event) => {
   if (!isDraggingQuestionButton.value) return
-
   const touch = event.touches?.[0] || event
-
-  const deltaX = dragStartX - touch.clientX
-  const deltaY = dragStartY - touch.clientY
 
   questionButtonPosition.value = {
     right: Math.max(
       0,
-      Math.min(window.innerWidth - 70, initialRight + deltaX)
+      Math.min(window.innerWidth - 70, initialRight + (dragStartX - touch.clientX))
     ),
     bottom: Math.max(
       0,
-      Math.min(window.innerHeight - 70, initialBottom - deltaY)
+      Math.min(window.innerHeight - 70, initialBottom - (dragStartY - touch.clientY))
     ),
   }
 }
 
-function endQuestionButtonDrag() {
+const endQuestionButtonDrag = () => {
   if (!isDraggingQuestionButton.value) return
-
   isDraggingQuestionButton.value = false
-
-  // Drag close to the bottom edge to hide the button.
-  if (questionButtonPosition.value.bottom < 35) {
-    questionButtonHidden.value = true
-  }
+  if (questionButtonPosition.value.bottom < 35) questionButtonHidden.value = true
 }
 
-function restoreQuestionButton() {
+const restoreQuestionButton = () => {
   questionButtonHidden.value = false
+  questionButtonPosition.value = { right: 16, bottom: 20 }
+}
 
-  questionButtonPosition.value = {
-    right: 16,
-    bottom: 20,
+// ==========================================
+// LEAVE
+// ==========================================
+
+const leave = async () => {
+  try {
+    await navigateTo("/")
+  } catch (error) {
+    console.error("Navigation failed:", error)
   }
 }
 
-const leave = async ()=> {
-     await navigateTo('/')
-}
-
-
-/////// For Time Calculation
-const timer = ref(null)
-
-const examDuration = ref(null)
-function formatTime(seconds) {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-}
-function startExam() {
-  if (!Submitted.value) {
-    examHeader.value?.start()
-  }
- 
-}
-
-
+// ==========================================
+// SUBMIT
+// ==========================================
 
 const submitExam = async () => {
-  // Save latest question time
-  saveQuestionTime()
+  if (isSubmitting.value || Submitted.value) return
+  if (!groupedSubjects.value.length) return
 
-  // Flatten all questions
-  appState.value.examQuestions = groupedSubjects.value.flatMap(
-    subject => subject.questions
-  )
-console.log(appState.value.examQuestions);
+  isSubmitting.value = true
 
-  Submitted.value = true
+  try {
+    saveQuestionTime()
 
-  const questions = appState.value.examQuestions
-
-  let total = questions.length
-  let answered = 0
-  let correct = 0
-  let wrong = 0
-
-  // Reset subject statistics
-  groupedSubjects.value.forEach(subject => {
-    subject.total = subject.questions.length
-    subject.answered = 0
-    subject.correct = 0
-    subject.wrong = 0
-    subject.score = 0
-    subject.maxScore = 0
-  })
-
-  // Calculate statistics
-  questions.forEach(question => {
-    const subject = groupedSubjects.value.find(
-      s => s.id === question.subject
+    const questions = groupedSubjects.value.flatMap(
+      (subject) => subject.questions || []
     )
 
-    if (!subject) return
+    appState.value.examQuestions = questions
+    Submitted.value = true
 
-    if (question.userAnswer) {
+    const total = questions.length
+    let answered = 0
+    let correct = 0
+    let wrong = 0
+
+    groupedSubjects.value.forEach((subject) => {
+      subject.total = subject.questions.length
+      subject.answered = 0
+      subject.correct = 0
+      subject.wrong = 0
+      subject.score = 0
+      subject.maxScore = 0
+    })
+
+    questions.forEach((question) => {
+      const subject = groupedSubjects.value.find((s) => s.id === question.subject)
+      if (!subject || !question.userAnswer) return
+
       answered++
       subject.answered++
 
@@ -328,356 +316,270 @@ console.log(appState.value.examQuestions);
         wrong++
         subject.wrong++
       }
+    })
+
+    // JAMB marks: every subject is out of 100
+    let aggregate = 0
+    let maxAggregate = 0
+
+    groupedSubjects.value.forEach((subject) => {
+      const jambQuestions = ["english", "english-language"].includes(subject.id)
+        ? 60
+        : 40
+
+      subject.score = Number(((subject.correct / jambQuestions) * 100).toFixed(2))
+      subject.maxScore = Number(
+        ((subject.questions.length / jambQuestions) * 100).toFixed(2)
+      )
+
+      aggregate += subject.score
+      maxAggregate += subject.maxScore
+    })
+
+    aggregate = Number(aggregate.toFixed(2))
+    maxAggregate = Number(maxAggregate.toFixed(2))
+
+    const percentage = Number(((correct / Math.max(total, 1)) * 100).toFixed(2))
+
+    // time
+    try {
+      examHeader.value?.stop?.()
+    } catch (error) {
+      console.error("Timer stop failed:", error)
     }
-  })
 
-  const unanswered = total - answered
+    const totalDuration =
+      durationToSeconds(appState.value.examSettings?.duration) || 0
 
-  // ==================================
-  // JAMB MARK CaALCULATION (2.5 marks/question)
-  // ==================================
+    const remaining = Number(examHeader.value?.getTimeLeft?.())
+    const timeLeft = Number.isFinite(remaining)
+      ? Math.max(0, Math.min(totalDuration, remaining))
+      : totalDuration
 
-  let aggregate = 0
-  let maxAggregate = 0
+    const durationUsed = Math.max(0, totalDuration - timeLeft)
+    const timeSpent = secondsToDuration(durationUsed)
+    const speed = Number((correct / Math.max(durationUsed / 60, 1)).toFixed(2))
+    const timePercent =
+      totalDuration > 0
+        ? Math.min(Math.round((durationUsed / totalDuration) * 100), 100)
+        : 0
 
-  groupedSubjects.value.forEach(subject => {
-     // JAMB total questions for this subject
-  const jambQuestions =
-      ["english", "english-language"].includes(subject.id) ? 60 : 40
-      
-        
-    // Score out of 100
-    subject.score = Number(
-      ((subject.correct / jambQuestions) * 100).toFixed(2)
-    )
+    const result = {
+      total,
+      answered,
+      unanswered: total - answered,
+      correct,
+      wrong,
+      percentage,
+      timestart: startingDate.value,
+      aggregate,
+      maxAggregate,
+      subjects: groupedSubjects.value,
+      totalDuration,
+      durationUsed,
+      timeSpent,
+      timePercent,
+      speed,
+    }
 
-    
-    subject.maxScore = Number(
-      ((subject.questions.length / jambQuestions) * 100).toFixed(2)
-    )
+    appState.value.examResult = result
 
-    aggregate += subject.score
-    maxAggregate += subject.maxScore
-  })
+    // A failed save must never block the report
+    try {
+      await save({
+        result,
+        questions: appState.value.examQuestions,
+        settings: appState.value.examSettings,
+      })
+    } catch (error) {
+      console.error("Saving exam history failed:", error)
+    }
 
-
-aggregate = Number(aggregate.toFixed(2))
-maxAggregate = Number(maxAggregate.toFixed(2))
-
-  // Overall percentage (optional)
-  const percentage = Number(
-    ((correct / Math.max(total, 1)) * 100).toFixed(2)
-  )
-
-  // ==================================
-  // TIME CALCULATIONS
-  // ==================================
-
-  examHeader.value?.stop()
-
-  const totalDuration = durationToSeconds(
-    appState.value.examSettings.duration
-  )
-
-  const remainingTime = Number(examHeader.value?.getTimeLeft?.())
-  const timeLeft = Number.isFinite(remainingTime)
-    ? Math.max(0, Math.min(totalDuration, remainingTime))
-    : totalDuration
-
-  const durationUsed = Math.max(0, totalDuration - timeLeft)
-  const timeSpent = secondsToDuration(durationUsed)
-
-  const speed = Number(
-    (
-      correct /
-      Math.max(durationUsed / 60, 1)
-    ).toFixed(2)
-  )
-
-  const timePercent = totalDuration > 0
-    ? Math.min(Math.round((durationUsed / totalDuration) * 100), 100)
-    : 0
-  
-  const result = {
-    total,
-    answered,
-    unanswered,
-    correct,
-    wrong,
-
-    // Overall percentage
-    percentage,
-    timestart: groupedSubjects.value.startingDate,
-    // Total score and maximum possible score
-    aggregate,
-    maxAggregate,
-
-    // Subjects with individual scores
-    subjects: groupedSubjects.value,
-
-    totalDuration,
-    durationUsed,
-    timeSpent,
-    timePercent,
-    speed
+    showExamReport.value = true
+  } catch (error) {
+    console.error("Submit failed:", error)
+    Submitted.value = false
+    alert("Something went wrong while submitting. Please try again.")
+  } finally {
+    isSubmitting.value = false
   }
-
-
-
-await save({
-
-    result,
-
-    questions: appState.value.examQuestions,
-
-    settings: appState.value.examSettings
-
-})
-  appState.value.examResult = result
-
-  
-  showExamReport.value = true
 }
 
-console.log(appState.value.examResult);
+// ==========================================
+// ANSWERS + KEYBOARD
+// ==========================================
 
-function timeFinished() {
-  submitExam()
-  // alert("Exam Finished!")
-  
-}
-
-function selectAnswer(letter) {
-  if (!currentQuestion.value) return
+const selectAnswer = (letter) => {
+  if (!currentQuestion.value || Submitted.value) return
 
   const options = currentQuestion.value.options || {}
-
   const key = Object.keys(options).find(
-    k => k.toLowerCase() === letter.toLowerCase()
+    (k) => k.toLowerCase() === letter.toLowerCase()
   )
 
-  if (key) {
-    currentQuestion.value.userAnswer = key
-  }
-}
-///KEY HANDLING
-function preventRefresh(e) {
-  if (
-    e.key === "F5" ||
-    (e.ctrlKey && e.key.toLowerCase() === "r")
-  ) {
-    e.preventDefault()
-  }
+  if (key) currentQuestion.value.userAnswer = key
 }
 
+const handleKeyboard = (event) => {
+  const element = document.activeElement
+  const tag = element?.tagName
 
-function handleKeyboard(event) {
-  // Don't trigger shortcuts while typing
-  const tag = document.activeElement?.tagName
+  if (tag === "INPUT" || tag === "TEXTAREA" || element?.isContentEditable) return
+  if (!hasQuestions.value) return
 
-  if (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    document.activeElement?.isContentEditable
-  ) {
-    return
-  }
-
-  const key = event.key.toLowerCase()
-
-  
-  switch (key) {
+  switch (event.key.toLowerCase()) {
     case "n":
-      next()
-      break
-
-    case "p":
-      previous()
-      break
     case "arrowright":
       next()
       break
+    case "p":
     case "arrowleft":
       previous()
       break
-
     case "a":
-      selectAnswer("A")
-      break
-
     case "b":
-      selectAnswer("B")
-      break
-
     case "c":
-      selectAnswer("C")
-      break
-
     case "d":
-      selectAnswer("D")
-      break
-
     case "e":
-      selectAnswer("E")
+      selectAnswer(event.key)
       break
   }
 }
 
+const blockShortcuts = (event) => {
+  const key = event.key.toLowerCase()
 
-
-///KEY HANDLING
-onMounted(async () => {
   if (
-    !isMobileTauri() &&
-    window.__TAURI_INTERNALS__
+    event.key === "F5" ||
+    event.key === "F12" ||
+    (event.ctrlKey && ["r", "u", "s", "p"].includes(key))
   ) {
+    event.preventDefault()
+  }
+}
+
+const blockEvent = (event) => event.preventDefault()
+
+// ==========================================
+// BUILD THE EXAM FROM APP STATE
+// ==========================================
+
+const buildGroups = (subjects, questions) => {
+  const subjectList = Array.isArray(subjects) ? subjects : []
+  const questionList = Array.isArray(questions) ? questions : []
+  let globalIndex = 1
+
+  return (
+    subjectList
+      .map((subject) => ({
+        ...subject,
+        currentQuestion: 1,
+        answered: 0,
+        questions: questionList
+          .filter((question) => question?.subject === subject.id)
+          .map((question) => ({
+            ...question,
+            index: globalIndex++,
+            answered: false,
+          })),
+      }))
+      // a subject with no questions would only create empty tabs
+      .filter((subject) => subject.questions.length > 0)
+  )
+}
+
+const initExam = () => {
+  try {
+    const state = appState.value
+    const review = !!state.reviewQuestions
+
+    const groups = review
+      ? buildGroups(state.selectedSubjectsView, state.examQuestionsView)
+      : buildGroups(state.selectedSubjects, state.examQuestions)
+
+    Submitted.value = review
+    groupedSubjects.value = groups
+    startingDate.value = new Date().toISOString()
+
+    if (!groups.length) {
+      loadError.value = "No questions were found for this exam."
+      return
+    }
+
+    setCurrent(groups[0], 1)
+    startQuestionTimer()
+    examHeader.value?.start?.()
+  } catch (error) {
+    console.error("Failed to prepare the exam:", error)
+    loadError.value = "We could not load this exam. Please go back and try again."
+  }
+}
+
+// ==========================================
+// LIFECYCLE
+// ==========================================
+
+onMounted(async () => {
+  window.addEventListener("keydown", handleKeyboard)
+  window.addEventListener("keydown", blockShortcuts)
+  document.addEventListener("contextmenu", blockEvent)
+  document.addEventListener("dragstart", blockEvent)
+
+  initExam()
+
+  if (!isMobileTauri() && isTauri()) {
     try {
-      await appWindow.setFullscreen(true)
+      await getWindow()?.setFullscreen(true)
     } catch (error) {
       console.error("Failed to enter exam fullscreen:", error)
     }
   }
-
-  window.addEventListener("keydown", handleKeyboard)
-   window.addEventListener("keydown", preventRefresh)
-    document.addEventListener("contextmenu", e => {
-    e.preventDefault()
-  })
-
-  document.addEventListener("dragstart", e => {
-  e.preventDefault()
 })
 
-function preventShortcuts(e) {
-  const key = e.key.toLowerCase()
-
-  if (
-    e.key === "F5" ||
-    (e.ctrlKey && ["r", "u", "s", "p"].includes(key)) ||
-    e.key === "F12"
-  ) {
-    e.preventDefault()
-  }
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-   
-  }
-})
-
-
-})
-
-const startingDate = ref(null)
-
-onBeforeUnmount(() => {
-  window.removeEventListener("keydown", handleKeyboard)
-   window.removeEventListener("keydown", preventRefresh)
-})
-const currentTime = ref(0)
-
-function ticking(seconds) {
-  currentTime.value = seconds
-}
-onMounted( async () => {
-
-    let globalIndex = 1
-      if (appState.value.selectedSubjects?.length> 0 &&  !appState.value.reviewQuestions) {
-         activeSubject.value =  appState.value.selectedSubjects[0].id
-         groupedSubjects.value = appState.value.selectedSubjects.map(subject => {
-
-        const subjectQuestions =   appState.value.examQuestions.filter(q => q.subject === subject.id).map(question => ({
-              ...question,
-              index: globalIndex++,
-              answered: false,
-              
-            }))
-
-        return {
-          ...subject,
-          currentQuestion: 1,
-          answered: 0,
-         
-          questions: subjectQuestions
-        }
-      })
-      }
-
-       if (appState.value.selectedSubjectsView?.length >0 &&  appState.value.reviewQuestions) {
-         activeSubject.value =  appState.value.selectedSubjectsView[0].id
-         groupedSubjects.value = appState.value.selectedSubjectsView.map(subject => {
-
-        const subjectQuestions =   appState.value.examQuestionsView.filter(q => q.subject === subject.id).map(question => ({
-              ...question,
-              index: globalIndex++,
-              answered: false,
-              
-            }))
-             Submitted.value = true
-
-        return {
-          ...subject,
-          currentQuestion: 1,
-          answered: 0,
-         
-          questions: subjectQuestions
-        }
-      })
-      }
-     
-     startingDate.value =   new Date().toISOString(),
-      currentSubject.value = groupedSubjects.value[0] 
-      currentQuestion.value = currentSubject.value.questions[0]
-    startQuestionTimer()
-      examHeader.value?.start()
-      
-})
 onBeforeUnmount(async () => {
-  if (
-    isMobileTauri() ||
-    !window.__TAURI_INTERNALS__
-  ) {
-    return
-  }
+  window.removeEventListener("keydown", handleKeyboard)
+  window.removeEventListener("keydown", blockShortcuts)
+  document.removeEventListener("contextmenu", blockEvent)
+  document.removeEventListener("dragstart", blockEvent)
+
+  if (isMobileTauri() || !isTauri()) return
 
   try {
-    await appWindow.setFullscreen(false)
-    await appWindow.setDecorations(true)
-    await appWindow.setResizable(true)
-    await appWindow.setAlwaysOnTop(false)
-    await appWindow.maximize()
+    const win = getWindow()
+    if (!win) return
+
+    await win.setFullscreen(false)
+    await win.setDecorations(true)
+    await win.setResizable(true)
+    await win.setAlwaysOnTop(false)
+    await win.maximize()
   } catch (error) {
     console.error("Failed to restore the application window:", error)
   }
 })
 
 // ==========================================
-// DISPLAY HELPERS (new: keep the template short)
+// DISPLAY HELPERS
 // ==========================================
 
-const attemptedCount = computed(() => {
-  return (
-    currentSubject.value?.questions?.filter(
-      (question) => question.userAnswer
-    ).length || 0
-  )
-})
+const tabSubjects = computed(() => groupedSubjects.value)
 
-const totalCount = computed(() => {
-  return currentSubject.value?.questions?.length || 0
-})
+const attemptedCount = computed(
+  () =>
+    currentSubject.value?.questions?.filter((question) => question.userAnswer)
+      .length || 0
+)
 
-const progressPercent = computed(() => {
-  return totalCount.value
+const totalCount = computed(() => currentSubject.value?.questions?.length || 0)
+
+const progressPercent = computed(() =>
+  totalCount.value
     ? Math.round((attemptedCount.value / totalCount.value) * 100)
     : 0
-})
+)
 
-// idle | selected | correct | wrong
 const optionState = (key) => {
   const question = currentQuestion.value
-
   if (!question) return "idle"
 
   if (Submitted.value) {
@@ -689,10 +591,9 @@ const optionState = (key) => {
   return question.userAnswer === key ? "selected" : "idle"
 }
 
-// Tile style in the question navigator (one blue hue only)
 const tileClass = (question, index) => {
   const isCurrent = currentSubject.value?.currentQuestion === index + 1
-  const answered = Boolean(question.userAnswer)
+  const answered = Boolean(question?.userAnswer)
 
   if (isCurrent) {
     return answered
@@ -705,24 +606,14 @@ const tileClass = (question, index) => {
     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
 }
 
-// Result strip under each tile after submitting
-const getQuestionClass = (question, index) => {
-  if (Submitted.value) {
-    if (question.answer === question.userAnswer) {
-      return "bg-[#0A6CFF] text-white"
-    }
+const getQuestionClass = (question) => {
+  if (!Submitted.value) return ""
 
-    if (
-      question.userAnswer &&
-      question.userAnswer !== question.answer
-    ) {
-      return "bg-[#0B2F6B] text-white"
-    }
+  if (question.answer === question.userAnswer) return "bg-[#0A6CFF] text-white"
+  if (question.userAnswer && question.userAnswer !== question.answer)
+    return "bg-[#0B2F6B] text-white"
 
-    return "bg-slate-400 text-white"
-  }
-
-  return ""
+  return "bg-slate-400 text-white"
 }
 </script>
 
@@ -738,12 +629,10 @@ const getQuestionClass = (question, index) => {
 
     <!-- TOP RIGHT CONTROLS -->
     <div
+      v-if="hasQuestions"
       class="fixed right-0 top-2 z-[100] flex h-12 items-center justify-end px-2 sm:px-6 lg:px-8"
     >
-      <ExamSubmitModal
-        v-model="showSubmitModal"
-        @submit="submitExam"
-      />
+      <ExamSubmitModal v-model="showSubmitModal" @submit="submitExam" />
     </div>
 
     <!-- NAVBAR -->
@@ -754,6 +643,34 @@ const getQuestionClass = (question, index) => {
         :question-number="currentSubject?.currentQuestion"
         @time-finished="submitExam"
       />
+    </div>
+
+    <!-- ========================================= -->
+    <!-- EMPTY / ERROR STATE -->
+    <!-- ========================================= -->
+    <div
+      v-if="!hasQuestions"
+      class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center"
+    >
+      <div
+        class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#0A6CFF]"
+      >
+        <Icon name="lucide:file-question" class="h-7 w-7" />
+      </div>
+
+      <h2 class="text-base font-bold text-[#0B2F6B]">No questions to show</h2>
+
+      <p class="max-w-xs text-sm text-slate-500">
+        {{ loadError || "There are no questions for this exam." }}
+      </p>
+
+      <button
+        type="button"
+        class="h-11 rounded-2xl bg-[#0A6CFF] px-5 text-sm font-bold text-white transition active:scale-95"
+        @click="leave"
+      >
+        Go back
+      </button>
     </div>
 
     <!-- ========================================= -->
@@ -796,9 +713,7 @@ const getQuestionClass = (question, index) => {
             :subjects="appState.examResult?.subjects || []"
           />
 
-          <ExamTopicRort
-            :questions="appState.examResult?.subjects || []"
-          />
+          <ExamTopicRort :questions="appState.examResult?.subjects || []" />
         </div>
       </div>
     </div>
@@ -807,22 +722,19 @@ const getQuestionClass = (question, index) => {
     <!-- SUBJECT TABS + PROGRESS BAR -->
     <!-- ========================================= -->
     <div
+      v-if="hasQuestions"
       class="relative z-10 shrink-0 bg-white shadow-[0_2px_10px_rgba(20,49,109,0.06)]"
     >
       <div
         class="flex overflow-x-auto px-2 [scrollbar-width:none] sm:px-10 [&::-webkit-scrollbar]:hidden"
       >
         <button
-          v-for="subject in (appState.reviewQuestions
-            ? appState.selectedSubjectsView || []
-            : appState.selectedSubjects || [])"
+          v-for="subject in tabSubjects"
           :key="subject.id"
           type="button"
           class="relative h-11 shrink-0 whitespace-nowrap px-2 text-xs font-bold transition active:bg-blue-50 sm:px-6"
           :class="
-            activeSubject === subject.id
-              ? 'text-[#0A6CFF]'
-              : 'text-slate-500'
+            activeSubject === subject.id ? 'text-[#0A6CFF]' : 'text-slate-500'
           "
           @click="selectSubject(subject)"
         >
@@ -846,9 +758,11 @@ const getQuestionClass = (question, index) => {
     <!-- ========================================= -->
     <!-- MAIN EXAM AREA -->
     <!-- ========================================= -->
-    <main class="flex min-h-0 flex-1 overflow-hidden">
+    <main v-if="hasQuestions" class="flex min-h-0 flex-1 overflow-hidden">
       <!-- DESKTOP QUESTION NAVIGATOR -->
-      <aside class="hidden shrink-0 px-2 py-3 pr-0 sm:flex sm:w-56 md:w-64 lg:w-72 sm:pl-3">
+      <aside
+        class="hidden shrink-0 px-2 py-3 pr-0 sm:flex sm:w-56 sm:pl-3 md:w-64 lg:w-72"
+      >
         <div
           class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
         >
@@ -891,7 +805,9 @@ const getQuestionClass = (question, index) => {
           class="flex min-h-0 w-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_24px_rgba(20,49,109,0.07)] ring-1 ring-blue-50"
         >
           <!-- card header -->
-          <div class="flex shrink-0 items-center justify-between gap-2 px-2 pt-4 sm:px-6">
+          <div
+            class="flex shrink-0 items-center justify-between gap-2 px-2 pt-4 sm:px-6"
+          >
             <span
               class="rounded-full bg-blue-50 px-2 py-1 text-xs font-bold text-[#0A6CFF] sm:px-3"
             >
@@ -904,14 +820,15 @@ const getQuestionClass = (question, index) => {
             <button
               v-if="!Submitted"
               type="button"
-              class="block h-8 rounded-xl bg-[#0B2F6B] px-2 text-xs font-bold text-white transition active:scale-95 sm:hidden sm:px-3"
+              :disabled="isSubmitting"
+              class="block h-8 rounded-xl bg-[#0B2F6B] px-2 text-xs font-bold text-white transition active:scale-95 disabled:opacity-50 sm:hidden sm:px-3"
               @click="showSubmitModal = true"
             >
               Submit
             </button>
 
             <button
-              v-if="Submitted"
+              v-else
               type="button"
               class="block h-8 rounded-xl bg-[#0B2F6B] px-2 text-xs font-bold text-white transition active:scale-95 sm:hidden sm:px-3"
               @click="showExamReport = true"
@@ -931,24 +848,29 @@ const getQuestionClass = (question, index) => {
                 class="mb-3 max-h-64 max-w-full rounded-2xl object-contain"
                 alt="Question image"
               />
-            
+
+              <!-- passage / instruction (only when it exists) -->
               <div
-                v-html="renderMath(currentQuestion.section)"
+                v-if="currentQuestion?.section"
                 class="question-section"
-               
+                v-html="safeRender(currentQuestion.section)"
               ></div>
 
               <div
                 class="question-content"
                 v-html="
-                 renderMath(currentQuestion?.question || currentQuestion?.text || 'Question not available')
+                  safeRender(
+                    currentQuestion?.question ||
+                      currentQuestion?.text ||
+                      'Question not available'
+                  )
                 "
               ></div>
 
-              <!-- OPTIONS (Flutter-style selectable tiles) -->
+              <!-- OPTIONS -->
               <div class="mt-4 flex flex-col gap-2">
                 <label
-                  v-for="([key, value]) in Object.entries(
+                  v-for="[key, value] in Object.entries(
                     currentQuestion?.options || {}
                   )"
                   :key="key"
@@ -980,8 +902,7 @@ const getQuestionClass = (question, index) => {
                       'bg-[#0A6CFF] text-white':
                         optionState(key) === 'selected' ||
                         optionState(key) === 'correct',
-                      'bg-[#0B2F6B] text-white':
-                        optionState(key) === 'wrong',
+                      'bg-[#0B2F6B] text-white': optionState(key) === 'wrong',
                     }"
                   >
                     {{ key }}
@@ -990,8 +911,13 @@ const getQuestionClass = (question, index) => {
                   <!-- text -->
                   <span
                     class="min-w-0 flex-1 break-words text-[15px] leading-snug text-[#201F22] sm:text-base"
-                    :class="optionState(key) === 'correct' || optionState(key) === 'wrong' ? 'font-bold' : 'font-normal'"
-                    v-html="renderMath(value)"
+                    :class="
+                      optionState(key) === 'correct' ||
+                      optionState(key) === 'wrong'
+                        ? 'font-bold'
+                        : 'font-normal'
+                    "
+                    v-html="safeRender(value)"
                   ></span>
 
                   <!-- status -->
@@ -1011,14 +937,10 @@ const getQuestionClass = (question, index) => {
 
               <!-- EXPLANATION -->
               <div
-                v-if="Submitted"
-                class="mt-5 rounded-2xl bg-blue-50 px-2 py-3 text-sm sm:pl-3 sm:pr-3"
+                v-if="Submitted && currentQuestion"
+                class="mt-5 rounded-2xl bg-blue-50 px-2 py-0 text-sm sm:pl-3 sm:pr-3"
               >
-                <QuestionExplanation
-                  v-if="currentQuestion"
-                  :question="currentQuestion"
-                />
-               
+                <QuestionExplanation :question="currentQuestion" />
               </div>
             </div>
           </div>
@@ -1031,7 +953,7 @@ const getQuestionClass = (question, index) => {
               <button
                 type="button"
                 class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-blue-50 px-2 text-sm font-bold text-[#0A6CFF] transition hover:bg-blue-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4"
-                :disabled="currentSubject?.currentQuestion <= 1"
+                :disabled="(currentSubject?.currentQuestion || 0) <= 1"
                 @click="previous"
               >
                 <Icon name="lucide:chevron-left" class="h-5 w-5" />
@@ -1041,10 +963,7 @@ const getQuestionClass = (question, index) => {
               <button
                 type="button"
                 class="flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-2xl bg-[#0A6CFF] px-2 text-sm font-bold text-white shadow-[0_6px_14px_rgba(10,108,255,0.35)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none sm:px-4"
-                :disabled="
-                  currentSubject?.currentQuestion >=
-                  currentSubject?.questions?.length
-                "
+                :disabled="isLastQuestion"
                 @click="next"
               >
                 <span class="hidden sm:inline">Next</span>
@@ -1063,9 +982,10 @@ const getQuestionClass = (question, index) => {
               </button>
 
               <button
-                v-if="!Submitted"
+                v-else
                 type="button"
-                class="h-11 rounded-2xl bg-[#0B2F6B] px-2 text-sm font-bold text-white transition hover:brightness-125 active:scale-95 sm:px-4"
+                :disabled="isSubmitting"
+                class="h-11 rounded-2xl bg-[#0B2F6B] px-2 text-sm font-bold text-white transition hover:brightness-125 active:scale-95 disabled:opacity-50 sm:px-4"
                 @click="showSubmitModal = true"
               >
                 Submit
@@ -1076,9 +996,9 @@ const getQuestionClass = (question, index) => {
       </section>
     </main>
 
-    <!-- MOBILE FLOATING "QUESTIONS" BUTTON (extended FAB) -->
+    <!-- MOBILE FLOATING "QUESTIONS" BUTTON -->
     <button
-      v-if="!showMobileQuestionList"
+      v-if="hasQuestions && !showMobileQuestionList"
       type="button"
       class="fixed bottom-[calc(env(safe-area-inset-bottom)+22px)] right-4 z-[110] flex h-12 items-center gap-2 rounded-2xl bg-[#0A6CFF] px-2 text-white shadow-[0_8px_20px_rgba(10,108,255,0.45)] transition active:scale-95 sm:hidden sm:px-4"
       @click="openMobileQuestionList"
@@ -1097,7 +1017,7 @@ const getQuestionClass = (question, index) => {
     <!-- MOBILE SHEET OVERLAY -->
     <Transition name="question-overlay">
       <div
-        v-if="showMobileQuestionList"
+        v-if="hasQuestions && showMobileQuestionList"
         class="fixed inset-0 z-[120] bg-black/50 sm:hidden"
         @click="closeMobileQuestionList"
       ></div>
@@ -1106,18 +1026,18 @@ const getQuestionClass = (question, index) => {
     <!-- MOBILE BOTTOM SHEET -->
     <Transition name="question-sheet">
       <section
-        v-if="showMobileQuestionList"
+        v-if="hasQuestions && showMobileQuestionList"
         class="fixed inset-x-0 bottom-0 z-[130] flex max-h-[80dvh] flex-col rounded-t-[28px] bg-white shadow-2xl sm:hidden"
       >
         <div class="flex shrink-0 justify-center pt-2">
           <div class="h-1.5 w-12 rounded-full bg-slate-200"></div>
         </div>
 
-        <div class="flex shrink-0 items-center justify-between px-2 py-3 sm:px-5">
+        <div
+          class="flex shrink-0 items-center justify-between px-2 py-3 sm:px-5"
+        >
           <div>
-            <h2 class="text-sm font-bold text-[#0B2F6B]">
-              Question Navigator
-            </h2>
+            <h2 class="text-sm font-bold text-[#0B2F6B]">Question Navigator</h2>
 
             <p class="mt-0.5 text-xs text-slate-500">
               Select a question to continue
@@ -1143,7 +1063,9 @@ const getQuestionClass = (question, index) => {
             </span>
           </div>
 
-          <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-blue-100">
+          <div
+            class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-blue-100"
+          >
             <div
               class="h-full rounded-full bg-[#0A6CFF] transition-all duration-300"
               :style="{ width: progressPercent + '%' }"
@@ -1152,7 +1074,9 @@ const getQuestionClass = (question, index) => {
         </div>
 
         <!-- grid -->
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-4 sm:px-5">
+        <div
+          class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-4 sm:px-5"
+        >
           <div class="grid grid-cols-5 gap-2.5">
             <button
               v-for="(question, index) in currentSubject?.questions || []"
@@ -1193,7 +1117,6 @@ const getQuestionClass = (question, index) => {
     </Transition>
   </div>
 </template>
-
 <style scoped>
 /* native-app feel */
 button {

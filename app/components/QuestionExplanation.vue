@@ -1,44 +1,32 @@
-
 <template>
   <section
     v-if="hasExplanation"
-    class="mt-5 w-full overflow-hidden rounded-2xl border border-[#b9873b]/20 bg-[#f6f3ec] shadow-sm"
+    class="mt w-full overflow-hidden rounded-2xl border border-[#b9873b]/20 bg-[#f6f3ec] shadow-sm"
   >
     <!-- Header -->
     <button
       type="button"
-      class="flex w-full items-center justify-between gap-3 px-2 py-4 text-left transition-colors duration-200 hover:bg-[#eee9df] sm:gap-4 sm:px-5 sm:py-4"
+      class="flex w-full items-center justify-between gap-3 px-0 py-4 text-left transition-colors duration-200 hover:bg-[#eee9df] sm:gap-4 sm:px-5 sm:py-4"
       @click="expanded = !expanded"
     >
-      <!-- Left -->
       <div class="flex min-w-0 items-center gap-3">
-        <!-- Icon -->
         <div
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#24304a] text-[#f6f3ec] sm:h-11 sm:w-11"
         >
-          <Icon
-            name="lucide:lightbulb"
-            class="h-5 w-5 sm:h-5.5 sm:w-5.5"
-          />
+          <Icon name="lucide:lightbulb" class="h-5 w-5" />
         </div>
 
-        <!-- Title -->
         <div class="min-w-0">
-          <h3
-            class="truncate text-sm font-bold text-[#24304a] sm:text-base"
-          >
+          <h3 class="truncate text-sm font-bold text-[#24304a] sm:text-base">
             Explanation
           </h3>
 
-          <p
-            class="mt-0.5 line-clamp-1 text-xs text-gray-500 sm:text-sm"
-          >
+          <p class="mt-0.5 line-clamp-1 text-xs text-gray-500 sm:text-sm">
             Understand why this answer is correct
           </p>
         </div>
       </div>
 
-      <!-- Arrow -->
       <div
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#24304a] transition-colors hover:bg-white sm:h-9 sm:w-9"
       >
@@ -56,11 +44,8 @@
         v-if="expanded"
         class="border-t border-[#b9873b]/15 px-1 pb-5 pt-5 sm:px-5 sm:pb-6"
       >
-        <!-- Main Explanation -->
-        <div
-          v-if="explanationText"
-          class="mb-5 sm:mb-6"
-        >
+        <!-- Main explanation -->
+        <div v-if="explanationText" class="mb-5 sm:mb-6">
           <div class="mb-2.5 flex items-center gap-2">
             <Icon
               name="lucide:circle-check"
@@ -74,16 +59,15 @@
             </h4>
           </div>
 
-          <!-- HTML Explanation -->
           <div
             class="explanation-content text-sm leading-7 text-gray-700 sm:text-[15px]"
             v-html="explanationText"
           />
         </div>
 
-        <!-- Simple Explanation -->
+        <!-- Simple explanation -->
         <div
-          v-if="question.explanation?.simplifiedExplanation"
+          v-if="simpleText"
           class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-2 sm:mb-6 sm:p-5"
         >
           <div class="mb-2.5 flex items-center gap-2">
@@ -92,42 +76,32 @@
               class="h-4 w-4 shrink-0 text-blue-700"
             />
 
-            <h4 class="text-sm font-bold text-blue-900">
-              Simple Explanation
-            </h4>
+            <h4 class="text-sm font-bold text-blue-900">Simple Explanation</h4>
           </div>
 
           <div
-            class="mistake-content text-sm font-semibold leading-6 text-gray-800"
-  v-html="renderMath(mistake.mistake)"
+            class="simple-explanation-content text-sm leading-6 text-gray-800"
+            v-html="simpleText"
           />
         </div>
 
-        <!-- Common Mistakes -->
-        <div
-          v-if="commonMistakes.length"
-          class="mb-5 sm:mb-6"
-        >
-          <!-- Heading -->
+        <!-- Common mistakes -->
+        <div v-if="commonMistakes.length" class="mb-5 sm:mb-6">
           <div class="mb-3 flex items-center gap-2">
             <Icon
               name="lucide:triangle-alert"
               class="h-4 w-4 shrink-0 text-red-600"
             />
 
-            <h4 class="text-sm font-bold text-[#24304a]">
-              Common Mistakes
-            </h4>
+            <h4 class="text-sm font-bold text-[#24304a]">Common Mistakes</h4>
           </div>
 
-          <!-- Mistakes -->
           <div class="space-y-3">
             <div
-              v-for="(mistake, index) in commonMistakes"
+              v-for="(item, index) in commonMistakes"
               :key="index"
               class="rounded-xl border border-red-100 bg-white p-2 shadow-sm sm:p-5"
             >
-              <!-- Mistake -->
               <div class="flex items-start gap-3">
                 <div
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-50 text-xs font-bold text-red-600"
@@ -138,14 +112,13 @@
                 <div class="min-w-0 flex-1">
                   <div
                     class="mistake-content text-sm font-semibold leading-6 text-gray-800"
-                    v-html="mistake.mistake"
+                    v-html="item.mistakeHtml"
                   />
                 </div>
               </div>
 
-              <!-- Why Wrong -->
               <div
-                v-if="mistake.whyWrong"
+                v-if="item.whyWrongHtml"
                 class="mt-3 border-t border-gray-100 pt-3"
               >
                 <div class="flex items-start gap-2">
@@ -162,9 +135,8 @@
                     </span>
 
                     <div
-                        class="why-wrong-content mt-1 text-sm leading-6 text-gray-600"
-                      v-html="renderMath(mistake.whyWrong)"
-
+                      class="why-wrong-content mt-1 text-sm leading-6 text-gray-600"
+                      v-html="item.whyWrongHtml"
                     />
                   </div>
                 </div>
@@ -173,49 +145,32 @@
           </div>
         </div>
 
-        <!-- AI Metadata -->
+        <!-- Metadata -->
         <div
-          v-if="showMetadata"
+          v-if="showMetadata && hasMetadata"
           class="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4"
         >
-          <!-- Source -->
           <span
-            v-if="question.explanation?.sourceType"
+            v-if="sourceType"
             class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-600"
           >
-            <Icon
-              name="lucide:database"
-              class="h-3.5 w-3.5"
-            />
-
-            Source:
-            {{ question.explanation.sourceType }}
+            <Icon name="lucide:database" class="h-3.5 w-3.5" />
+            Source: {{ sourceType }}
           </span>
 
-          <!-- Confidence -->
           <span
-            v-if="question.explanation?.confidence !== undefined"
+            v-if="confidencePercent !== null"
             class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs text-green-700"
           >
-            <Icon
-              name="lucide:badge-check"
-              class="h-3.5 w-3.5"
-            />
-
-            Confidence:
-            {{ Math.round(question.explanation.confidence * 100) }}%
+            <Icon name="lucide:badge-check" class="h-3.5 w-3.5" />
+            Confidence: {{ confidencePercent }}%
           </span>
 
-          <!-- Review -->
           <span
-            v-if="question.explanation?.needsReview"
+            v-if="needsReview"
             class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs text-amber-700"
           >
-            <Icon
-              name="lucide:clock-3"
-              class="h-3.5 w-3.5"
-            />
-
+            <Icon name="lucide:clock-3" class="h-3.5 w-3.5" />
             Needs review
           </span>
         </div>
@@ -225,87 +180,169 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 
 const props = withDefaults(
   defineProps<{
-    question: any
+    question?: any
     defaultOpen?: boolean
     showMetadata?: boolean
   }>(),
   {
+    question: null,
     defaultOpen: false,
-    showMetadata: false
+    showMetadata: false,
   }
 )
 
 const expanded = ref(props.defaultOpen)
 
-/*
-|--------------------------------------------------------------------------
-| Explanation
-|--------------------------------------------------------------------------
-*/
-
-const explanation = computed(() => {
-  return props.question?.explanation ?? null
-})
+// collapse again when the user moves to another question
+watch(
+  () => props.question?.id,
+  () => {
+    expanded.value = props.defaultOpen
+  }
+)
 
 /*
 |--------------------------------------------------------------------------
-| Check whether explanation exists
+| Safe helpers
 |--------------------------------------------------------------------------
 */
 
-const hasExplanation = computed(() => {
-  const data = explanation.value
+// Never throws, always returns a string
+const safeRender = (value: unknown): string => {
+  if (value === null || value === undefined || value === "") return ""
 
-  if (!data) {
-    return false
+  const text = String(value)
+
+  try {
+    return String(renderMath(text) ?? "")
+  } catch (error) {
+    console.error("renderMath failed:", error)
+    return text
+  }
+}
+
+const asText = (value: unknown): string =>
+  typeof value === "string" ? value.trim() : ""
+
+/*
+|--------------------------------------------------------------------------
+| Normalize explanation
+| Accepts: null, an object, a JSON string, or plain text
+|--------------------------------------------------------------------------
+*/
+
+const explanation = computed<Record<string, any> | null>(() => {
+  let value: any = props.question?.explanation
+
+  if (value === null || value === undefined || value === "") return null
+
+  if (typeof value === "string") {
+    const text = value.trim()
+    if (!text) return null
+
+    // maybe it is JSON that was never parsed
+    try {
+      const parsed = JSON.parse(text)
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed
+      }
+
+      if (typeof parsed === "string") return { explanation: parsed }
+    } catch {
+      // plain text, fall through
+    }
+
+    return { explanation: text }
   }
 
-  return Boolean(
-    data.explanation ||
-    data.simplifiedExplanation ||
-    (
-      Array.isArray(data.commonMistakes) &&
-      data.commonMistakes.length > 0
-    )
-  )
+  if (typeof value === "object" && !Array.isArray(value)) return value
+
+  return null
 })
 
 /*
 |--------------------------------------------------------------------------
-| Main explanation
+| Parts
 |--------------------------------------------------------------------------
 */
 
-const explanationText = computed(() => {
-  return renderMath(explanation.value?.explanation || "")
-})
+const explanationText = computed(() =>
+  safeRender(asText(explanation.value?.explanation))
+)
 
-/*
-|--------------------------------------------------------------------------
-| Common mistakes
-|--------------------------------------------------------------------------
-*/
+const simpleText = computed(() =>
+  safeRender(asText(explanation.value?.simplifiedExplanation))
+)
 
 const commonMistakes = computed(() => {
-  const mistakes = explanation.value?.commonMistakes
+  const list = explanation.value?.commonMistakes
+  if (!Array.isArray(list)) return []
 
-  return Array.isArray(mistakes)
-    ? mistakes
-    : []
+  return list
+    .map((item: any) => {
+      // a plain string counts as the mistake text
+      if (typeof item === "string") {
+        return { mistakeHtml: safeRender(item), whyWrongHtml: "" }
+      }
+
+      if (item && typeof item === "object") {
+        return {
+          mistakeHtml: safeRender(item.mistake),
+          whyWrongHtml: safeRender(item.whyWrong),
+        }
+      }
+
+      return null
+    })
+    .filter(
+      (item): item is { mistakeHtml: string; whyWrongHtml: string } =>
+        !!item && !!(item.mistakeHtml || item.whyWrongHtml)
+    )
 })
+
+const hasExplanation = computed(
+  () =>
+    !!explanationText.value ||
+    !!simpleText.value ||
+    commonMistakes.value.length > 0
+)
+
+/*
+|--------------------------------------------------------------------------
+| Metadata
+|--------------------------------------------------------------------------
+*/
+
+const sourceType = computed(() => asText(explanation.value?.sourceType))
+
+const confidencePercent = computed(() => {
+  const value = Number(explanation.value?.confidence)
+
+  if (explanation.value?.confidence === undefined || !Number.isFinite(value)) {
+    return null
+  }
+
+  // accepts 0.85 and 85
+  const percent = value <= 1 ? value * 100 : value
+  return Math.max(0, Math.min(100, Math.round(percent)))
+})
+
+const needsReview = computed(() => !!explanation.value?.needsReview)
+
+const hasMetadata = computed(
+  () =>
+    !!sourceType.value ||
+    confidencePercent.value !== null ||
+    needsReview.value
+)
 </script>
 
 <style scoped>
-/*
-|--------------------------------------------------------------------------
-| Explanation transition
-|--------------------------------------------------------------------------
-*/
-
 .explanation-enter-active,
 .explanation-leave-active {
   transition:
@@ -326,18 +363,20 @@ const commonMistakes = computed(() => {
   max-height: 2000px;
 }
 
-/*
-|--------------------------------------------------------------------------
-| v-html content
-|--------------------------------------------------------------------------
-*/
-
 .explanation-content :deep(p),
 .simple-explanation-content :deep(p),
 .mistake-content :deep(p),
 .why-wrong-content :deep(p) {
   margin-bottom: 0.75rem;
 }
+
+.explanation-content :deep(p:last-child),
+.simple-explanation-content :deep(p:last-child),
+.mistake-content :deep(p:last-child),
+.why-wrong-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
 .explanation-content :deep(.katex),
 .simple-explanation-content :deep(.katex),
 .mistake-content :deep(.katex),
@@ -354,12 +393,6 @@ const commonMistakes = computed(() => {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 4px 0;
-}
-.explanation-content :deep(p:last-child),
-.simple-explanation-content :deep(p:last-child),
-.mistake-content :deep(p:last-child),
-.why-wrong-content :deep(p:last-child) {
-  margin-bottom: 0;
 }
 
 .explanation-content :deep(strong),
@@ -407,4 +440,3 @@ const commonMistakes = computed(() => {
   margin: 1rem 0;
 }
 </style>
-

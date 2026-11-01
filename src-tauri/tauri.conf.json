@@ -27,7 +27,9 @@
         "visible": true,
         "alwaysOnTop": false,
         "shadow": false,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "zoomHotkeysEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-pinch"
       },
       {
         "label": "main",
@@ -40,7 +42,9 @@
         "maximized": true,
         "fullscreen": false,
         "center": true,
-        "visible": false
+        "visible": false,
+        "zoomHotkeysEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-pinch"
       }
     ],
 
@@ -68,6 +72,11 @@
     ],
 
     "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller",
+        "silent": true
+      },
+
       "wix": {
         "bannerPath": "installer-assets/wix-banner.bmp",
         "dialogImagePath": "installer-assets/wix-dialog.bmp"

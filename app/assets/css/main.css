@@ -25,11 +25,18 @@ body,
   min-height: 100%;
   min-height: 100dvh; /* visible height on phones; 100vh can be taller */
   margin: 0;
+  touch-action: pan-x pan-y; /* scrolling allowed, pinch and double-tap zoom blocked */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
 }
+
 *{
   -webkit-user-select: none;
   user-select: none;
+  touch-action: pan-x pan-y; /* scrolling allowed, pinch and double-tap zoom blocked */
+ 
   -webkit-touch-callout: none;
+  
 }
 input, textarea  [ contenteditable="true"] {
   -webkit-user-select: text;
