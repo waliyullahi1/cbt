@@ -1,7 +1,12 @@
-import Database from "@tauri-apps/plugin-sql"
+// ✅ WEB CHANGE 1 of 5
+// "import type" means the Tauri SQL plugin is used only for TypeScript types,
+// so it is not bundled into the browser build.
+import type Database from "@tauri-apps/plugin-sql"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { resolveResource } from "@tauri-apps/api/path"
 import { isSoftwareActivated } from "~/composables/useSoftwareSecurity"
+// ✅ loadDatabase = Tauri SQL in the app, SQLite WASM in the browser
+import { loadDatabase, isTauriApp } from "~/utils/web/webSqlite"
 
 type DatabaseName =
   | "cbt.db"
@@ -490,8 +495,12 @@ type LessonSeedPayload = {
 
 async function loadBundledLessonSeed(): Promise<LessonSeedPayload | null> {
   try {
-    const resourcePath = await resolveResource("resources/lessonss.json")
-    const rawText = await readTextFile(resourcePath)
+    // Tauri reads the bundled resource file; the browser downloads it
+    // from public/resources/lessonss.json
+    const rawText = isTauriApp()
+      ? await readTextFile(await resolveResource("resources/lessonss.json"))
+      : await (await fetch("/resources/lessonss.json")).text()
+
     const parsed = JSON.parse(rawText) as Partial<LessonSeedPayload>
 
     if (
@@ -1039,12 +1048,24 @@ async function openAndInitializeDatabase(
       })
 
       try {
-        const db = await Database.load(connectionString)
+        // ✅ WEB CHANGE 3 of 5
+        // Was: const db = await Database.load(connectionString)
+        const db = (await loadDatabase(connectionString)) as unknown as SqlDatabase
 
         if (!readOnly) {
           await db.execute("PRAGMA busy_timeout = 10000")
-          await db.execute("PRAGMA journal_mode = WAL")
+
+          // ✅ WEB CHANGE 4 of 5
+          // WAL is not supported by the browser's storage, so only Tauri uses it
+          if (isTauriApp()) {
+            await db.execute("PRAGMA journal_mode = WAL")
+          }
+
           await db.execute("PRAGMA synchronous = NORMAL")
+
+          // Tauri turns this on by default; the browser does not.
+          // Without it, ON DELETE CASCADE would not delete child rows.
+          await db.execute("PRAGMA foreign_keys = ON")
         }
 
         await initialize(db)
@@ -1085,7 +1106,10 @@ async function openBundledContentDatabase(
   if (!bundledContentPromises[name]) {
     bundledContentPromises[name] = (async () => {
       const connectionString = `sqlite:bundled-${name}?mode=ro`
-      const db = await Database.load(connectionString)
+
+      // ✅ WEB CHANGE 5 of 5
+      // Was: const db = await Database.load(connectionString)
+      const db = (await loadDatabase(connectionString)) as unknown as SqlDatabase
 
       if (name === "questions.db") {
         await db.select(`

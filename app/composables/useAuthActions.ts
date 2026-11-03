@@ -85,7 +85,21 @@ export function useAuthActions(otpverify: Ref<boolean>) {
         return
       }
 
-      await auth.saveUser(res.data?.data || null)
+     const loggedInUser = res.data?.data
+
+if (!loggedInUser) {
+  throw new Error("Login successful, but user information is missing.")
+}
+
+await auth.saveUser(loggedInUser)
+
+await auth.initialize()
+
+$toast.success("Login successful")
+
+await navigateTo("/", {
+  replace: true,
+})
 
       $toast.success(res.data?.message || "Login successful.")
       setTimeout(() => router.push("/"), 500)

@@ -1,137 +1,183 @@
-// import tailwindcss from "@tailwindcss/vite"
 
+import tailwindcss from "@tailwindcss/vite";
 
-
-
-// export default defineNuxtConfig({
-//   // ...everything else unchanged
-//  compatibilityDate: "2025-07-15",
-
-//   devtools: {
-//     enabled: false,
-//   },
-
-//   modules: [
-//     "@nuxt/icon",
-//     "@nuxt/fonts",
-//     "@nuxt/ui",
-//   ],
-
-//   ssr: false,
-
-//   nitro: {
-//     preset: "static",
-//   },
-
-//   css: [
-//     "~/assets/css/main.css",
-//   ],
-//   devServer: {
-//     host: "0.0.0.0",
-//     port: 3000,
-//   },
-
-//   vite: {
-//     plugins: [tailwindcss()],
-//     clearScreen: false,
-//     envPrefix: ["VITE_", "TAURI_"],
-//     server: {
-//       strictPort: true,
-//       watch: { usePolling: true, interval: 500 },
-//     },
-//   },
-
-//   app: {
-//     baseURL: process.env.NODE_ENV === "production" ? "./" : "/",
-//     pageTransition: { name: "page-sheet", mode: "out-in" },
-//   },
-
-
-
-//    icon: {
-//     provider: "none",
-
-//     clientBundle: {
-//       scan: true,
-//       includeCustomCollections: true,
-//     },
-//   },
-
-//   app: {
-//     baseURL: "./",
-
-//     pageTransition: {
-//       name: "page-sheet",
-//       mode: "out-in",
-//     },
-//   },
-
-//   runtimeConfig: {
-//     mapboxSecret: process.env.MAPBOX_SECRET || "",
-//     geminiApiKey: process.env.GEMINI_API_KEY || "",
-
-//     public: {
-//       projectName: "cbt lesson",
-
-//       apiUrl:
-//         process.env.NUXT_PUBLIC_API_URL ||
-//         "https://www.api.examtips.abanise.com",
-//     },
-//   },
-
-//   ignore: ["**/src-tauri/**"],
-// })
-
-
-import tailwindcss from "@tailwindcss/vite"
-
-const host = process.env.TAURI_DEV_HOST
+const host = process.env.TAURI_DEV_HOST;
+const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
 
-  devtools: { enabled: false },
+  devtools: {
+    enabled: false,
+  },
 
-  modules: ["@nuxt/icon", "@nuxt/fonts", "@nuxt/ui"],
+  modules: [
+    "@nuxt/icon",
+    "@vite-pwa/nuxt",
+    "@nuxt/fonts",
+    "@nuxt/ui",
+  ],
 
   ssr: false,
 
-  nitro: { preset: "static" },
+  nitro: {
+    preset: "static",
+  },
 
-  css: ["~/assets/css/main.css", 'katex/dist/katex.min.css'],
+  css: [
+    "~/assets/css/main.css",
+    "katex/dist/katex.min.css",
+  ],
+
+  // PWA CONFIGURATION
+  pwa: {
+    registerType: "autoUpdate",
+
+    manifest: {
+      id: "/",
+      name: "ExamTips",
+      short_name: "ExamTips",
+      description:
+        "Prepare for JAMB, WAEC and NECO examinations.",
+
+      theme_color: "#1F319D",
+      background_color: "#ffffff",
+
+      display: "standalone",
+      orientation: "portrait",
+
+      start_url: "/",
+      scope: "/",
+
+      icons: [
+        {
+          src: "/pwa-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: "/pwa-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: "/pwa-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
+      ],
+    },
+
+    workbox: {
+      globPatterns: [
+        "**/*.{js,css,html,ico,png,svg,woff2,webp}",
+      ],
+
+      cleanupOutdatedCaches: true,
+    },
+
+    devOptions: {
+     enabled: true,
+  type: "module",
+    },
+  },
+
+  // APP CONFIGURATION
   app: {
+    // Tauri uses relative paths.
+    // Hosted website uses root paths.
+    baseURL: isTauriBuild ? "./" : "/",
+
+    pageTransition: {
+      name: "page-sheet",
+      mode: "out-in",
+    },
+
     head: {
+      title: "ExamTips",
+      titleTemplate: "%s | ExamTips",
+
+      htmlAttrs: {
+        lang: "en",
+      },
+
       meta: [
         {
+          charset: "utf-8",
+        },
+        {
           name: "viewport",
-          // viewport-fit=cover is required for env(safe-area-inset-*) to work
-          content: "width=device-width, initial-scale=1,  maximum-scale=1, user-scalable=no, viewport-fit=cover",
+          content:
+            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+        },
+        {
+          name: "theme-color",
+          content: "#1F319D",
+        },
+        {
+          name: "description",
+          content:
+            "Prepare for JAMB and WAEC with ExamTips. Practise past questions, take CBT mock exams, and study exam-focused lessons.",
+        },
+      ],
+
+      link: [
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/pwa-512x512.png",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/pwa-512x512.png",
         },
       ],
     },
   },
 
- devServer: {
+  // DEVELOPMENT SERVER
+  devServer: {
     host: "0.0.0.0",
     port: 3000,
   },
 
+  // VITE CONFIGURATION
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+    ],
+
     clearScreen: false,
-    envPrefix: ["VITE_", "TAURI_"],
+
+    envPrefix: [
+      "VITE_",
+      "TAURI_",
+    ],
+
     server: {
+      host: "0.0.0.0",
       strictPort: true,
-      ws: {
-        protocol: "ws",
-          host: "0.0.0.0",
-        clientPort: 3000,   // go through the dev server itself, no extra port
+
+      watch: {
+        usePolling: true,
+        interval: 500,
       },
+
+      hmr: host
+        ? {
+            protocol: "ws",
+            host,
+            clientPort: 3000,
+          }
+        : undefined,
     },
+
     optimizeDeps: {
-      // Scan all your .vue files at startup so every dependency is found
-      // up front (remove this line if startup gets slower or errors)
       entries: ["**/*.vue"],
+
       include: [
         "dompurify",
         "@meforma/vue-toaster",
@@ -147,31 +193,37 @@ export default defineNuxtConfig({
     },
   },
 
-  // One app block only. "./" is needed for the built app, but "/" is
-  // safer while developing so hot reload can find its files.
-  app: {
-    baseURL: process.env.NODE_ENV === "production" ? "./" : "/",
-    pageTransition: { name: "page-sheet", mode: "out-in" },
-  },
-
+  // ICON CONFIGURATION
   icon: {
     provider: "none",
+
     clientBundle: {
       scan: true,
       includeCustomCollections: true,
     },
   },
 
+  // SEO CONFIGURATION
+  site: {
+    url: "https://www.examtips.abanise.com",
+    name: "ExamTips",
+  },
+
+  // ENVIRONMENT VARIABLES
   runtimeConfig: {
     mapboxSecret: process.env.MAPBOX_SECRET || "",
     geminiApiKey: process.env.GEMINI_API_KEY || "",
 
     public: {
-      projectName: " C lesson",
-      apiUrl: 'https://www.api.examtips.abanise.com'
-        // "https://www.api.examtips.abanise.com",
+      projectName: "ExamTips",
+
+      apiUrl:
+        process.env.NUXT_PUBLIC_API_URL ||
+        "https://www.api.examtips.abanise.com",
     },
   },
 
-  ignore: ["**/src-tauri/**"],
-})
+  ignore: [
+    "**/src-tauri/**",
+  ],
+});

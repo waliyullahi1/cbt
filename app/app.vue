@@ -1,4 +1,6 @@
 <template>
+  <div>
+    <VitePwaManifest />
 
   <div
      v-if="!startupReady || keepSplash || holdForAnimation"
@@ -47,11 +49,13 @@
     v-else 
     class="pt-[env(safe-area-inset-top)] h-dvh w-dvw overflow-hidden"
   >
+  
     <NuxtLayout>
+      
       <NuxtPage />
     </NuxtLayout>
   </div>
-  <!-- Main application: rendered only after successful startup -->
+ </div>
  
 </template>
 
@@ -72,6 +76,11 @@ import {
 import {
   isMobileTauri,
 } from "~/utils/isMobileTauri"
+
+// ✅ WEB CHANGE 1 of 3: the browser (PWA) database installer
+import {
+  installWebDatabases,
+} from "~/utils/web/webSqlite"
 
 import {
   isTauri,
@@ -103,6 +112,16 @@ const logoStyle = {
   "--logo-w": LOGO_WIDTH,
   "--logo-h": LOGO_HEIGHT,
 }
+
+
+/* =========================================================
+   WEB (PWA) DATABASE VERSION
+========================================================= */
+
+// ✅ WEB CHANGE 2 of 3
+// Bump this text whenever you put NEW .db files in public/db/,
+// so browsers download the new copies instead of keeping old ones.
+const WEB_DB_VERSION = "1.0.0"
 
 
 /* =========================================================
@@ -168,6 +187,15 @@ let startupRunning = false
 let splashQueryUnlisten: (() => void) | undefined
 let splashReadyUnlisten: (() => void) | undefined
 
+
+useHead({
+  link: [
+    {
+      rel: "apple-touch-icon",
+      href: "/image/pwa-192x192.png",
+    },
+  ],
+});
 
 /* =========================================================
    LOGGING
@@ -443,10 +471,16 @@ async function initializeApp(): Promise<void> {
 
   try {
     /*
-     * PLAIN BROWSER
+     * PLAIN BROWSER  (this is the PWA / website path)
      *
-     * npm run dev in a normal browser does not have the
-     * native Tauri runtime or bundled DB setup.
+     * ✅ WEB CHANGE 3 of 3
+     *
+     * A normal browser has no Tauri runtime, so none of the Tauri
+     * code below this block ever runs there. Here we:
+     *   1. restore the saved session
+     *   2. download the .db files once into the browser's storage
+     *   3. open the databases
+     * If any step fails, the error and the Retry button are shown.
      */
 
     if (!import.meta.client || !isTauri()) {
@@ -456,8 +490,26 @@ async function initializeApp(): Promise<void> {
         errors,
       )
 
+      if (import.meta.client) {
+        await runStep(
+          "Preparing the offline databases...",
+          () => installWebDatabases(WEB_DB_VERSION),
+          errors,
+        )
+
+        if (errors.length === 0) {
+          await runStep(
+            "Initializing the application databases...",
+            () => initializeDatabases(),
+            errors,
+          )
+        }
+      }
+
       if (errors.length === 0) {
         startupReady.value = true
+      } else {
+        startupError.value = errors.join("\n\n")
       }
 
       return
