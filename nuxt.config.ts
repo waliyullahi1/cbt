@@ -29,7 +29,10 @@ export default defineNuxtConfig({
     "katex/dist/katex.min.css",
   ],
 
+  // --------------------------------------------------
   // PWA CONFIGURATION
+  // --------------------------------------------------
+
   pwa: {
     registerType: "autoUpdate",
 
@@ -40,30 +43,29 @@ export default defineNuxtConfig({
       description:
         "Prepare for JAMB, WAEC and NECO examinations.",
 
-      theme_color: "#1F319D",
-      background_color: "#ffffff",
-
+      start_url: "/",
+      scope: "/",
       display: "standalone",
       orientation: "portrait",
 
-      start_url: "/",
-      scope: "/",
+      background_color: "#ffffff",
+      theme_color: "#1F319D",
 
       icons: [
         {
-          src: "/pwa-192x192.png",
+          src: "/image/pwa-192x192.png",
           sizes: "192x192",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "/pwa-512x512.png",
+          src: "/image/pwa-512x512.png",
           sizes: "512x512",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "/pwa-512x512.png",
+          src: "/image/pwa-512x512.png",
           sizes: "512x512",
           type: "image/png",
           purpose: "maskable",
@@ -73,19 +75,92 @@ export default defineNuxtConfig({
 
     workbox: {
       globPatterns: [
-        "**/*.{js,css,html,ico,png,svg,woff2,webp}",
+        "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,avif,woff,woff2,ttf,webmanifest,db}",
       ],
 
-      cleanupOutdatedCaches: true,
-    },
+      maximumFileSizeToCacheInBytes:
+        50 * 1024 * 1024,
 
-    devOptions: {
-     enabled: true,
-  type: "module",
+      cleanupOutdatedCaches: true,
+
+      skipWaiting: true,
+
+      clientsClaim: true,
+
+      navigateFallback: "/",
+
+      navigateFallbackDenylist: [
+        /^\/api\//,
+      ],
+
+      runtimeCaching: [
+        // Local and remote images.
+        {
+          urlPattern: ({ request }) =>
+            request.destination === "image",
+
+          handler: "CacheFirst",
+
+          options: {
+            cacheName: "examtips-images",
+
+            expiration: {
+              maxEntries: 300,
+              maxAgeSeconds: 60 * 60 * 24 * 365,
+            },
+
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+
+        // Fonts.
+        {
+          urlPattern: ({ request }) =>
+            request.destination === "font",
+
+          handler: "CacheFirst",
+
+          options: {
+            cacheName: "examtips-fonts",
+
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 * 365,
+            },
+
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+
+        // Bundled SQLite databases.
+        {
+          urlPattern: ({ url }) =>
+            url.origin === self.location.origin &&
+            url.pathname.startsWith("/db/") &&
+            url.pathname.endsWith(".db"),
+
+          handler: "CacheFirst",
+
+          options: {
+            cacheName: "examtips-databases",
+
+            cacheableResponse: {
+              statuses: [200],
+            },
+          },
+        },
+      ],
     },
   },
 
+  // --------------------------------------------------
   // APP CONFIGURATION
+  // --------------------------------------------------
+
   app: {
     // Tauri uses relative paths.
     // Hosted website uses root paths.
@@ -128,23 +203,33 @@ export default defineNuxtConfig({
         {
           rel: "icon",
           type: "image/png",
-          href: "/pwa-512x512.png",
+          href: "/image/pwa-192x192.png",
         },
         {
           rel: "apple-touch-icon",
-          href: "/pwa-512x512.png",
+          href: "/image/pwa-512x512.png",
+        },
+        {
+          rel: "manifest",
+          href: "/manifest.webmanifest",
         },
       ],
     },
   },
 
+  // --------------------------------------------------
   // DEVELOPMENT SERVER
+  // --------------------------------------------------
+
   devServer: {
     host: "0.0.0.0",
     port: 3000,
   },
 
+  // --------------------------------------------------
   // VITE CONFIGURATION
+  // --------------------------------------------------
+
   vite: {
     plugins: [
       tailwindcss(),
@@ -193,7 +278,10 @@ export default defineNuxtConfig({
     },
   },
 
+  // --------------------------------------------------
   // ICON CONFIGURATION
+  // --------------------------------------------------
+
   icon: {
     provider: "none",
 
@@ -203,13 +291,19 @@ export default defineNuxtConfig({
     },
   },
 
+  // --------------------------------------------------
   // SEO CONFIGURATION
+  // --------------------------------------------------
+
   site: {
     url: "https://www.examtips.abanise.com",
     name: "ExamTips",
   },
 
+  // --------------------------------------------------
   // ENVIRONMENT VARIABLES
+  // --------------------------------------------------
+
   runtimeConfig: {
     mapboxSecret: process.env.MAPBOX_SECRET || "",
     geminiApiKey: process.env.GEMINI_API_KEY || "",

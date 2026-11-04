@@ -1,6 +1,15 @@
 
+import type { Worker as WorkerType } from 'worker'
+
+// ==================================================
+// TYPES
+// ==================================================
+
 export type WebDatabase = {
-  select<T = any>(sql: string, params?: unknown[]): Promise<T>
+  select<T = any>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<T>
 
   execute(
     sql: string,
@@ -16,64 +25,146 @@ type Pending = {
   reject: (error: Error) => void
 }
 
+type WorkerResponse = {
+  id: number
+  result?: unknown
+  error?: string
+}
+
+type DatabaseMessage =
+  | {
+      type: 'exists'
+      name: string
+    }
+  | {
+      type: 'install'
+      name: string
+      bytes: ArrayBuffer
+      replace: boolean
+    }
+  | {
+      type: 'select'
+      name: string
+      sql: string
+      params?: unknown[]
+    }
+  | {
+      type: 'execute'
+      name: string
+      sql: string
+      params?: unknown[]
+    }
+
+// ==================================================
+// WORKER STATE
+// ==================================================
+
 let worker: Worker | null = null
+
 let nextId = 1
 
 const pending = new Map<number, Pending>()
 
+// ==================================================
+// WORKER ERROR HANDLING
+// ==================================================
+
+function rejectPendingRequests(error: Error): void {
+  for (const call of pending.values()) {
+    call.reject(error)
+  }
+
+  pending.clear()
+}
+
+function destroyWorker(error: Error): void {
+  rejectPendingRequests(error)
+
+  if (worker) {
+    worker.terminate()
+    worker = null
+  }
+}
+
+// ==================================================
+// CREATE OR REUSE SQLITE WORKER
+// ==================================================
+
 function getWorker(): Worker {
-  if (!worker) {
-    worker = new Worker(
-      new URL('./sqlite.worker.ts', import.meta.url),
-      { type: 'module' }
-    )
+  if (worker) {
+    return worker
+  }
 
-    worker.onmessage = (event: MessageEvent) => {
-      const { id, result, error } = event.data
-      const call = pending.get(id)
+  const instance = new Worker(
+    new URL('./sqlite.worker.ts', import.meta.url),
+    {
+      type: 'module',
+      name: 'examtips-sqlite-worker',
+    },
+  )
 
-      if (!call) return
+  instance.onmessage = (
+    event: MessageEvent<WorkerResponse>,
+  ) => {
+    const { id, result, error } = event.data
 
-      pending.delete(id)
+    const call = pending.get(id)
 
-      if (error) {
-        call.reject(new Error(error))
-      } else {
-        call.resolve(result)
-      }
-    }
+    if (!call) return
 
-    worker.onerror = (event) => {
-      const error = new Error(
-        event.message || 'SQLite worker failed'
-      )
+    pending.delete(id)
 
-      for (const call of pending.values()) {
-        call.reject(error)
-      }
-
-      pending.clear()
-      worker?.terminate()
-      worker = null
+    if (error) {
+      call.reject(new Error(error))
+    } else {
+      call.resolve(result)
     }
   }
 
-  return worker
+  instance.onerror = (event: ErrorEvent) => {
+    const error = new Error(
+      event.message || 'SQLite worker failed.',
+    )
+
+    destroyWorker(error)
+  }
+
+  instance.onmessageerror = () => {
+    const error = new Error(
+      'Could not read a message from the SQLite worker.',
+    )
+
+    destroyWorker(error)
+  }
+
+  worker = instance
+
+  return instance
 }
 
+// ==================================================
+// SEND MESSAGE TO SQLITE WORKER
+// ==================================================
+
 function send<T>(
-  msg: Record<string, unknown>,
+  msg: DatabaseMessage,
   transfer: Transferable[] = [],
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = nextId++
 
-    pending.set(id, { resolve, reject })
+    pending.set(id, {
+      resolve,
+      reject,
+    })
 
     try {
       getWorker().postMessage(
-        { id, ...msg },
-        transfer
+        {
+          id,
+          ...msg,
+        },
+        transfer,
       )
     } catch (error) {
       pending.delete(id)
@@ -81,118 +172,284 @@ function send<T>(
       reject(
         error instanceof Error
           ? error
-          : new Error(String(error))
+          : new Error(String(error)),
       )
     }
   })
 }
 
+// ==================================================
+// OPEN WEB DATABASE
+// ==================================================
+
 export function openWebDatabase(
-  name: string
+  name: string,
 ): WebDatabase {
   return {
-    select: (sql, params = []) =>
-      send({
+    select: <T = any>(
+      sql: string,
+      params: unknown[] = [],
+    ) => {
+      return send<T>({
         type: 'select',
         name,
         sql,
         params,
-      }),
+      })
+    },
 
-    execute: (sql, params = []) =>
-      send({
+    execute: (
+      sql: string,
+      params: unknown[] = [],
+    ) => {
+      return send<{
+        rowsAffected: number
+        lastInsertId: number | null
+      }>({
         type: 'execute',
         name,
         sql,
         params,
-      }),
+      })
+    },
   }
 }
 
-// --------------------------------------------------
-// Install bundled browser databases
-// --------------------------------------------------
+// ==================================================
+// BUNDLED DATABASE INSTALLATION
+// ==================================================
 
 const VERSION_KEY = 'examtips-db-version'
 
-const BUNDLED = [
+const BUNDLED_DATABASES = [
   'questions.db',
   'lessons.db',
   'dictionary.db',
-]
+] as const
 
 let installationPromise: Promise<void> | null = null
 
+// ==================================================
+// STORAGE HELPERS
+// ==================================================
+
+function readDatabaseVersion(): string | null {
+  try {
+    return localStorage.getItem(VERSION_KEY)
+  } catch (error) {
+    console.warn(
+      'Could not read database version:',
+      error,
+    )
+
+    return null
+  }
+}
+
+function saveDatabaseVersion(version: string): void {
+  try {
+    localStorage.setItem(VERSION_KEY, version)
+  } catch (error) {
+    console.warn(
+      'Could not save database version:',
+      error,
+    )
+  }
+}
+
+function isBrowserOnline(): boolean {
+  return typeof navigator !== 'undefined'
+    ? navigator.onLine
+    : false
+}
+
+// ==================================================
+// INSTALL DATABASES
+// ==================================================
+
 export function installWebDatabases(
-  appVersion: string
+  appVersion: string,
 ): Promise<void> {
-  if (installationPromise) {
-    return installationPromise
+  if (typeof window === 'undefined') {
+    return Promise.reject(
+      new Error('Browser environment required.'),
+    )
   }
 
-  installationPromise = installDatabases(appVersion)
-    .catch((error) => {
-      installationPromise = null
-      throw error
-    })
+  if (!installationPromise) {
+    installationPromise = installDatabases(appVersion)
+      .catch((error) => {
+        installationPromise = null
+        throw error
+      })
+  }
 
   return installationPromise
 }
 
+// ==================================================
+// ACTUAL INSTALLATION PROCESS
+// ==================================================
+
 async function installDatabases(
-  appVersion: string
+  appVersion: string,
 ): Promise<void> {
-  if (typeof window === 'undefined') {
-    throw new Error('Browser database installation requires a client')
-  }
+  const previousVersion = readDatabaseVersion()
 
-  const refresh =
-    localStorage.getItem(VERSION_KEY) !== appVersion
+  const refresh = previousVersion !== appVersion
 
-  for (const name of BUNDLED) {
+  let allUpdated = true
+
+  for (const name of BUNDLED_DATABASES) {
+    console.info(`[ExamTips DB] Checking ${name}`)
+
+    // ----------------------------------------------
+    // 1. Check whether database exists in OPFS
+    // ----------------------------------------------
+
     const installed = await send<boolean>({
       type: 'exists',
       name,
     })
 
-    if (installed && !refresh) {
+    // ----------------------------------------------
+    // 2. Reuse existing database when appropriate
+    // ----------------------------------------------
+
+    if (installed && (!refresh || !isBrowserOnline())) {
+      console.info(
+        `[ExamTips DB] Reusing existing ${name}`,
+      )
+
+      if (refresh) {
+        allUpdated = false
+      }
+
       continue
     }
 
-    const response = await fetch(`/db/${name}`)
+    // ----------------------------------------------
+    // 3. Download database
+    // ----------------------------------------------
 
-    if (!response.ok) {
+    try {
+      console.info(
+        `[ExamTips DB] Downloading ${name}`,
+      )
+
+      const response = await fetch(
+        `/db/${name}`,
+        {
+          method: 'GET',
+          cache: 'no-cache',
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status}: ${response.statusText}`,
+        )
+      }
+
+      const bytes = await response.arrayBuffer()
+
+      if (bytes.byteLength === 0) {
+        throw new Error(
+          `${name} is empty.`,
+        )
+      }
+
+      console.info(
+        `[ExamTips DB] Downloaded ${name}: ${(
+          bytes.byteLength / 1024 / 1024
+        ).toFixed(2)} MB`,
+      )
+
+      // --------------------------------------------
+      // 4. Install database into OPFS
+      // --------------------------------------------
+
+      await send<{ installed: boolean }>(
+        {
+          type: 'install',
+          name,
+          bytes,
+          replace: installed,
+        },
+        [bytes],
+      )
+
+      console.info(
+        `[ExamTips DB] Installed ${name}`,
+      )
+
+    } catch (error) {
+      console.error(
+        `[ExamTips DB] Failed to install ${name}`,
+        error,
+      )
+
+      // Preserve a previously installed database.
+      if (installed) {
+        console.warn(
+          `[ExamTips DB] Keeping existing ${name}`,
+        )
+
+        allUpdated = false
+
+        continue
+      }
+
       throw new Error(
-        `Could not download ${name} (${response.status})`
+        `Unable to install ${name}. ${
+          error instanceof Error
+            ? error.message
+            : String(error)
+        }`,
       )
     }
+  }
 
-    const bytes = await response.arrayBuffer()
+  // ----------------------------------------------
+  // 5. Save version only after successful updates
+  // ----------------------------------------------
 
-    await send(
-      {
-        type: 'install',
-        name,
-        bytes,
-        replace: refresh,
-      },
-      [bytes]
+  if (allUpdated) {
+    saveDatabaseVersion(appVersion)
+
+    console.info(
+      `[ExamTips DB] All databases are ready. Version: ${appVersion}`,
+    )
+  } else {
+    console.warn(
+      '[ExamTips DB] Some databases are still on an older version.',
     )
   }
 
-  // Only save the version after all databases are installed.
-  localStorage.setItem(VERSION_KEY, appVersion)
+  // ----------------------------------------------
+  // 6. Request persistent browser storage
+  // ----------------------------------------------
 
   try {
-    await navigator.storage?.persist?.()
+    if (navigator.storage?.persist) {
+      const persistent =
+        await navigator.storage.persist()
+
+      console.info(
+        `[ExamTips DB] Persistent storage: ${persistent}`,
+      )
+    }
   } catch (error) {
-    console.warn('Could not request persistent storage:', error)
+    console.warn(
+      '[ExamTips DB] Storage persistence request failed:',
+      error,
+    )
   }
 }
 
-// --------------------------------------------------
-// Platform detection
-// --------------------------------------------------
+// ==================================================
+// PLATFORM DETECTION
+// ==================================================
 
 export function isTauriApp(): boolean {
   return (
@@ -201,13 +458,18 @@ export function isTauriApp(): boolean {
   )
 }
 
-// --------------------------------------------------
-// Unified database loader
-// --------------------------------------------------
+// ==================================================
+// UNIFIED DATABASE LOADER
+// ==================================================
 
 export async function loadDatabase(
-  connectionString: string
+  connectionString: string,
 ): Promise<WebDatabase> {
+
+  // ----------------------------------------------
+  // TAURI: Use native SQLite plugin
+  // ----------------------------------------------
+
   if (isTauriApp()) {
     const { default: Database } =
       await import('@tauri-apps/plugin-sql')
@@ -217,10 +479,26 @@ export async function loadDatabase(
     ) as unknown as WebDatabase
   }
 
+  // ----------------------------------------------
+  // BROWSER / PWA: Use SQLite WASM and OPFS
+  // ----------------------------------------------
+
   const name = connectionString
     .replace(/^sqlite:/, '')
     .split('?')[0]
     .replace(/^bundled-/, '')
+
+  if (
+    !name ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name === '.' ||
+    name === '..'
+  ) {
+    throw new Error(
+      `Invalid database connection string: ${connectionString}`,
+    )
+  }
 
   return openWebDatabase(name)
 }

@@ -195,7 +195,7 @@ useHead({
       href: "/image/pwa-192x192.png",
     },
   ],
-});
+})
 
 /* =========================================================
    LOGGING
@@ -483,37 +483,44 @@ async function initializeApp(): Promise<void> {
      * If any step fails, the error and the Retry button are shown.
      */
 
-    if (!import.meta.client || !isTauri()) {
+  if (!import.meta.client || !isTauri()) {
+    // Browser and installed PWA startup
+    await runStep(
+      "Loading your saved session...",
+      () => auth.initialize(),
+      errors,
+    )
+
+    if (import.meta.client) {
       await runStep(
-        "Loading your saved session...",
-        () => auth.initialize(),
+        "Preparing the offline databases...",
+        () => installWebDatabases(WEB_DB_VERSION),
         errors,
       )
 
-      if (import.meta.client) {
+      // Only initialize application databases if installation succeeded.
+      if (errors.length === 0) {
         await runStep(
-          "Preparing the offline databases...",
-          () => installWebDatabases(WEB_DB_VERSION),
+          "Initializing the application databases...",
+          () => initializeDatabases(),
           errors,
         )
-
-        if (errors.length === 0) {
-          await runStep(
-            "Initializing the application databases...",
-            () => initializeDatabases(),
-            errors,
-          )
-        }
       }
+    }
 
-      if (errors.length === 0) {
-        startupReady.value = true
-      } else {
-        startupError.value = errors.join("\n\n")
-      }
-
+    if (errors.length > 0) {
+      startupError.value = errors.join("\n\n")
+      startupReady.value = false
       return
     }
+
+    startupStep.value = "Opening ExamTips..."
+    startupReady.value = true
+
+    startupLog("Browser/PWA startup completed successfully")
+
+    return
+  }
 
     const appWindow = getCurrentWindow()
 
@@ -856,7 +863,7 @@ onMounted(() => {
 
 .sp-name {
   margin-top: 14px;
-  font: 800 clamp(25px, 11vw, 22px) / 1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font: 800 clamp(22px, 5vw, 32px) / 1 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   letter-spacing: -0.5px;
   opacity: 0;
   animation: sp-fade 0.3s 1.7s ease-out forwards;
