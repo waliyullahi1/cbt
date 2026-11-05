@@ -74,6 +74,10 @@ import {
 } from "~/utils/database/databaseBootstrap"
 
 import {
+  setCopyFinished,
+} from "~/utils/database/databaseCopyState"
+
+import {
   isMobileTauri,
 } from "~/utils/isMobileTauri"
 
@@ -186,6 +190,7 @@ let startupRunning = false
 
 let splashQueryUnlisten: (() => void) | undefined
 let splashReadyUnlisten: (() => void) | undefined
+let databaseCopyPromise: Promise<void> | null = null
 
 
 useHead({
@@ -256,6 +261,27 @@ async function runStep(
   }
 }
 
+function startDatabaseCopyInBackground(): void {
+  if (!import.meta.client || databaseCopyPromise) {
+    return
+  }
+
+  databaseCopyPromise = (async () => {
+    if (isTauri()) {
+      await initializeBundledDatabases()
+    } else {
+      await installWebDatabases(WEB_DB_VERSION)
+    }
+
+    await initializeDatabases()
+    setCopyFinished()
+    startupLog("Database copy completed; writable database is ready")
+  })().catch((error) => {
+    databaseCopyPromise = null
+    startupLogError("Background database copy failed; continuing with bundled data", error)
+  })
+}
+
 
 /* =========================================================
    FULL INITIALIZATION
@@ -285,37 +311,12 @@ async function initializeCore(
     ),
 
     runStep(
-      "Preparing the bundled databases...",
-      () => initializeBundledDatabases(),
+      "Opening the application database...",
+      () => initializeDatabases({ includeContent: false }),
       errors,
     ),
   ])
 
-  /*
-   * Do not open/migrate the application database if
-   * the bundled database preparation failed.
-   */
-
-  const bundleFailed = errors.some(
-    (message) =>
-      message.startsWith(
-        "Preparing the bundled databases...",
-      ),
-  )
-
-  if (bundleFailed) {
-    errors.push(
-      "Application database initialization was skipped because bundled database preparation failed.",
-    )
-
-    return
-  }
-
-  await runStep(
-    "Initializing the application databases...",
-    () => initializeDatabases(),
-    errors,
-  )
 }
 
 
@@ -339,10 +340,7 @@ async function resumeUi(
 
   await runStep(
     "Opening the application databases...",
-    () =>
-      initializeDatabases({
-        migrate: false,
-      }),
+    () => initializeDatabases({ includeContent: false }),
     errors,
   )
 }
@@ -493,19 +491,10 @@ async function initializeApp(): Promise<void> {
 
     if (import.meta.client) {
       await runStep(
-        "Preparing the offline databases...",
-        () => installWebDatabases(WEB_DB_VERSION),
+        "Opening the application database...",
+        () => initializeDatabases({ includeContent: false }),
         errors,
       )
-
-      // Only initialize application databases if installation succeeded.
-      if (errors.length === 0) {
-        await runStep(
-          "Initializing the application databases...",
-          () => initializeDatabases(),
-          errors,
-        )
-      }
     }
 
     if (errors.length > 0) {
@@ -517,6 +506,7 @@ async function initializeApp(): Promise<void> {
     startupStep.value = "Opening ExamTips..."
     startupReady.value = true
 
+    startDatabaseCopyInBackground()
     startupLog("Browser/PWA startup completed successfully")
 
     return
@@ -568,6 +558,7 @@ async function initializeApp(): Promise<void> {
       startupStep.value = "Opening ExamTips..."
 
       startupReady.value = true
+      startDatabaseCopyInBackground()
 
       startupLog(
         "Mobile startup completed successfully",
@@ -710,6 +701,7 @@ async function initializeApp(): Promise<void> {
       await invoke("show_main_window")
 
       startupReady.value = true
+      startDatabaseCopyInBackground()
 
       startupLog(
         "Desktop main window is ready",
@@ -730,6 +722,7 @@ async function initializeApp(): Promise<void> {
     }
 
     startupReady.value = true
+    startDatabaseCopyInBackground()
   } catch (error) {
     startupLogError(
       "Application startup failed",

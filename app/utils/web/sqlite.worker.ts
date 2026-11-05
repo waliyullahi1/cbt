@@ -8,6 +8,7 @@ type Msg =
 
 let pool: any = null
 let poolPromise: Promise<any> | null = null
+let sqlite3Module: any = null
 
 const connections = new Map<string, any>()
 
@@ -18,7 +19,7 @@ async function getPool() {
 
   poolPromise = (async () => {
     try {
-      const sqlite3 = await sqlite3InitModule()
+      const sqlite3 = await getSqlite3()
 
       const instance = await sqlite3.installOpfsSAHPoolVfs({
         name: 'examtips-pool',
@@ -34,6 +35,14 @@ async function getPool() {
   })()
 
   return poolPromise
+}
+
+async function getSqlite3() {
+  if (!sqlite3Module) {
+    sqlite3Module = await sqlite3InitModule()
+  }
+
+  return sqlite3Module
 }
 
 // Database names are simple filenames, not paths.
@@ -62,17 +71,65 @@ function hasFile(p: any, name: string): boolean {
 }
 
 async function open(name: string) {
-  const p = await getPool()
   const filename = normalizeName(name)
 
   let db = connections.get(filename)
 
   if (!db) {
-    db = new p.OpfsSAHPoolDb(`/${filename}`)
+    if (filename.startsWith('bundled-')) {
+      db = await openBundledDatabase(filename)
+    } else {
+      const p = await getPool()
+      db = new p.OpfsSAHPoolDb(`/${filename}`)
+    }
+
     connections.set(filename, db)
   }
 
   return db
+}
+
+async function openBundledDatabase(filename: string) {
+  const database = filename.slice('bundled-'.length)
+  const response = await fetch(`/db/${database}`)
+
+  if (!response.ok) {
+    throw new Error(
+      `Could not load bundled ${database}: HTTP ${response.status}.`,
+    )
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  const sqlite3 = await getSqlite3()
+  const db = new sqlite3.oo1.DB(':memory:', 'c')
+  const data = sqlite3.wasm.allocFromTypedArray(bytes)
+  let ownershipTransferred = false
+
+  try {
+    const result = sqlite3.capi.sqlite3_deserialize(
+      db.pointer,
+      'main',
+      data,
+      bytes.byteLength,
+      bytes.byteLength,
+      sqlite3.capi.SQLITE_DESERIALIZE_FREEONCLOSE |
+        sqlite3.capi.SQLITE_DESERIALIZE_READONLY,
+    )
+
+    if (result !== sqlite3.capi.SQLITE_OK) {
+      throw new Error(sqlite3.capi.sqlite3_errmsg(db.pointer))
+    }
+
+    ownershipTransferred = true
+    return db
+  } catch (error) {
+    db.close()
+    throw error
+  } finally {
+    if (!ownershipTransferred) {
+      sqlite3.wasm.dealloc(data)
+    }
+  }
 }
 
 function closeConnection(name: string) {

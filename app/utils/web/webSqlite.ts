@@ -486,7 +486,6 @@ export async function loadDatabase(
   const name = connectionString
     .replace(/^sqlite:/, '')
     .split('?')[0]
-    .replace(/^bundled-/, '')
 
   if (
     !name ||

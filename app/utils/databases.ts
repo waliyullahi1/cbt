@@ -7,6 +7,7 @@ import { resolveResource } from "@tauri-apps/api/path"
 import { isSoftwareActivated } from "~/composables/useSoftwareSecurity"
 // ✅ loadDatabase = Tauri SQL in the app, SQLite WASM in the browser
 import { loadDatabase, isTauriApp } from "~/utils/web/webSqlite"
+import { getIsCopyFinished } from "~/utils/database/databaseCopyState"
 
 type DatabaseName =
   | "cbt.db"
@@ -37,6 +38,7 @@ const bundledContentPromises: Partial<
 > = {}
 
 let applicationDatabasesPromise: Promise<void> | null = null
+let coreDatabasesPromise: Promise<void> | null = null
 
 
 // ============================================================
@@ -1105,7 +1107,9 @@ async function openBundledContentDatabase(
 
   if (!bundledContentPromises[name]) {
     bundledContentPromises[name] = (async () => {
-      const connectionString = `sqlite:bundled-${name}?mode=ro`
+      const connectionString = isTauriApp()
+        ? `sqlite:${await resolveResource(`resources/${name}`)}?mode=ro`
+        : `sqlite:bundled-${name}?mode=ro`
 
       // ✅ WEB CHANGE 5 of 5
       // Was: const db = await Database.load(connectionString)
@@ -1208,7 +1212,7 @@ export function getDB(): Promise<SqlDatabase> {
 
 export function getQuestionsDB(): Promise<SqlDatabase> {
 
-  if (!isSoftwareActivated()) {
+  if (!isSoftwareActivated() || !getIsCopyFinished()) {
     return openBundledContentDatabase("questions.db")
   }
 
@@ -1224,7 +1228,7 @@ export function getQuestionsDB(): Promise<SqlDatabase> {
 // ============================================================
 
 export function getLessonsDB(): Promise<SqlDatabase> {
-  if (!isSoftwareActivated()) {
+  if (!isSoftwareActivated() || !getIsCopyFinished()) {
     return openBundledContentDatabase("lessons.db")
   }
 
@@ -1243,7 +1247,9 @@ export async function getDictDB(): Promise<SqlDatabase> {
   return openAndInitializeDatabase(
     "dictionary.db",
     initializeDictionaryDatabase,
-    "sqlite:bundled-dictionary.db?mode=ro",
+    isTauriApp()
+      ? `sqlite:${await resolveResource("resources/dictionary.db")}?mode=ro`
+      : "sqlite:bundled-dictionary.db?mode=ro",
     true,
   )
 }
@@ -1282,19 +1288,31 @@ export async function initializeLessonsDatabase(): Promise<void> {
   await getLessonsDB()
 }
 
-export function initializeDatabases(): Promise<void> {
+export function initializeDatabases(
+  options: { includeContent?: boolean } = {},
+): Promise<void> {
+  const includeContent = options.includeContent ?? true
+
+  if (!coreDatabasesPromise) {
+    coreDatabasesPromise = openAndInitializeDatabase(
+      "cbt.db",
+      initializeCbtDatabase,
+    ).then(() => undefined).catch((error) => {
+      coreDatabasesPromise = null
+      throw error
+    })
+  }
+
+  if (!includeContent) {
+    return coreDatabasesPromise
+  }
+
   if (!applicationDatabasesPromise) {
     applicationDatabasesPromise = (async () => {
-      await openAndInitializeDatabase("cbt.db", initializeCbtDatabase)
+      await coreDatabasesPromise
       await getDictDB()
-
-      if (isSoftwareActivated()) {
-        await getQuestionsDB()
-        await getLessonsDB()
-      } else {
-        await openBundledContentDatabase("questions.db")
-        await openBundledContentDatabase("lessons.db")
-      }
+      await getQuestionsDB()
+      await getLessonsDB()
     })().catch((error) => {
       applicationDatabasesPromise = null
       throw error
