@@ -1,6 +1,7 @@
-import { KeyringSession } from "tauri-plugin-keyring-store-api";
-import { Store } from "@tauri-apps/plugin-store";
 import { getPlatform, getAppVersion } from "~/utils/deviceInfo";
+
+// NOTE: the Tauri plugins are imported lazily (inside functions) so that
+// the browser/PWA build never touches them.
 
 const KEYRING_SESSION_PATH = "/abanise/security";
 const KEYRING_CLIENT = "abanise-security";
@@ -10,20 +11,50 @@ const PUBLIC_KEY_RECORD = "software_public_key";
 const SYSTEM_ID_KEY = "software_system_id";
 const INSTALLATION_ID_KEY = "software_installation_id";
 const LICENSE_INFO_KEY = "software_license_info";
+const WEB_SIGNER_KEY = "software_web_signer";
 
-let keyringSession: KeyringSession | null = null;
-let keyringClient: Awaited<ReturnType<KeyringSession["createClient"]>> | null = null;
+let keyringSession: any = null;
+let keyringClient: any = null;
 
 let systemIdCache: string | null = null;
-let privateKeyCache: CryptoKey | null = null;
 let isMobileCache: boolean | null = null;
 let keysPromise: Promise<SoftwareKeys> | null = null;
 
 type SoftwareKeys = {
-  privateKey: CryptoKey;
-  publicKey: CryptoKey;
   publicKeyPem: string;
+  sign: (data: Uint8Array) => Promise<ArrayBuffer>;
+  // kept for backwards compatibility (only set on Tauri)
+  privateKey?: CryptoKey;
+  publicKey?: CryptoKey;
 };
+
+/* =========================================================
+   ENVIRONMENT
+========================================================= */
+
+export const isTauri = () =>
+  typeof window !== "undefined" &&
+  ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+
+async function currentPlatform(): Promise<string> {
+  if (!isTauri()) return "web";
+  return await getPlatform();
+}
+
+async function currentAppVersion(): Promise<string> {
+  if (!isTauri()) {
+    const config = useRuntimeConfig();
+    return String((config.public as any).appVersion || "web");
+  }
+  return await getAppVersion();
+}
+
+async function isMobile(): Promise<boolean> {
+  if (isMobileCache !== null) return isMobileCache;
+  const p = await currentPlatform();
+  isMobileCache = p === "android" || p === "ios";
+  return isMobileCache;
+}
 
 /* =========================================================
    DEBUG HELPERS
@@ -47,8 +78,6 @@ function dbgErr(label: string, err: any) {
   );
 }
 
-// Wraps any async step: logs start, success (with ms), or failure + rethrows.
-// Also warns if a step is still pending after 8s (detects silent hangs).
 async function step<T>(label: string, fn: () => Promise<T> | T): Promise<T> {
   const t0 = Date.now();
   dbg(`START ${label}`);
@@ -69,7 +98,6 @@ async function step<T>(label: string, fn: () => Promise<T> | T): Promise<T> {
   }
 }
 
-// Rejects if a promise takes too long (so a hang becomes a visible error)
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(
@@ -89,72 +117,112 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-async function isMobile(): Promise<boolean> {
-  if (isMobileCache !== null) return isMobileCache;
-  const p = await getPlatform();
-  isMobileCache = p === "android" || p === "ios";
-  return isMobileCache;
-}
-
-// Call once at app start (e.g. in app.vue onMounted or a plugin)
 export async function debugEnvironment() {
   dbg("---- ENV CHECK ----");
   dbg("userAgent:", navigator.userAgent);
   dbg("location:", location.href);
+  dbg("isTauri:", isTauri());
   dbg("isSecureContext:", (globalThis as any).isSecureContext);
-  dbg("crypto exists:", typeof crypto !== "undefined");
   dbg("crypto.subtle exists:", !!(typeof crypto !== "undefined" && crypto.subtle));
-  dbg("crypto.randomUUID exists:", typeof crypto?.randomUUID === "function");
-  dbg("TextEncoder exists:", typeof TextEncoder !== "undefined");
+  dbg("indexedDB exists:", typeof indexedDB !== "undefined");
 
   try {
-    await getPlatform().then((p) => dbg("platform:", p));
-    await getAppVersion().then((v) => dbg("appVersion:", v));
+    dbg("platform:", await currentPlatform());
+    dbg("appVersion:", await currentAppVersion());
   } catch (e) {
     dbgErr("deviceInfo", e);
   }
 
-  // Ed25519 support test
-  try {
-    await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
-    dbg("Ed25519 SUPPORTED");
-  } catch (e) {
-    dbgErr("Ed25519 support test (THIS WEBVIEW MAY NOT SUPPORT Ed25519)", e);
-  }
+  dbg("native Ed25519:", await supportsNativeEd25519());
 
-  // Store test
   try {
-    const s = await getAppStore();
-    dbg("Store loaded OK", !!s);
+    await kvGet("__probe__");
+    dbg("KV storage OK");
   } catch (e) {
-    dbgErr("Store test", e);
-  }
-
-  // Keyring test (desktop only, with timeout so it can't hang the check)
-  try {
-    if (await isMobile()) {
-      dbg("Keyring test skipped on mobile");
-    } else {
-      await withTimeout(initKeyringSession(), 10000, "initKeyringSession");
-      dbg("Keyring OK");
-    }
-  } catch (e) {
-    dbgErr("Keyring test", e);
+    dbgErr("KV storage test", e);
   }
   dbg("---- ENV CHECK DONE ----");
 }
 
 /* =========================================================
-   STORE
+   WEB: PERSISTENT STORAGE
+   Asks the browser not to evict our data (license, keys, SQLite files).
 ========================================================= */
 
+export async function requestPersistentStorage(): Promise<boolean> {
+  try {
+    if (isTauri() || !navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}
+
+/* =========================================================
+   KEY/VALUE STORAGE
+   Tauri -> @tauri-apps/plugin-store
+   Web   -> IndexedDB
+========================================================= */
+
+let idbPromise: Promise<IDBDatabase> | null = null;
+
+function openIdb(): Promise<IDBDatabase> {
+  if (!idbPromise) {
+    idbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open("abanise-security", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("kv");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => {
+        idbPromise = null;
+        reject(req.error);
+      };
+    });
+  }
+  return idbPromise;
+}
+
+async function idbGet<T>(key: string): Promise<T | null> {
+  const db = await openIdb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction("kv", "readonly").objectStore("kv").get(key);
+    req.onsuccess = () => resolve((req.result as T) ?? null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(key: string, value: unknown): Promise<void> {
+  const db = await openIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 async function getAppStore() {
+  const { Store } = await import("@tauri-apps/plugin-store");
   return await step("Store.load", () =>
     Store.load("abanise-security.json", {
       autoSave: true,
       defaults: {},
     }),
   );
+}
+
+async function kvGet<T>(key: string): Promise<T | null> {
+  if (!isTauri()) return idbGet<T>(key);
+  const store = await getAppStore();
+  return ((await store.get<T>(key)) ?? null) as T | null;
+}
+
+async function kvSet(key: string, value: unknown): Promise<void> {
+  if (!isTauri()) return idbSet(key, value);
+  const store = await getAppStore();
+  await store.set(key, value);
+  await store.save();
 }
 
 /* =========================================================
@@ -195,6 +263,24 @@ function arrayBufferToPem(buffer: ArrayBuffer): string {
   return ["-----BEGIN PUBLIC KEY-----", lines, "-----END PUBLIC KEY-----"].join("\n");
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+}
+
+// Wraps a raw 32-byte Ed25519 public key into SPKI (same format as WebCrypto)
+function rawEd25519ToSpki(raw: Uint8Array): ArrayBuffer {
+  const prefix = new Uint8Array([
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
+  ]);
+  const out = new Uint8Array(prefix.length + raw.length);
+  out.set(prefix, 0);
+  out.set(raw, prefix.length);
+  return toArrayBuffer(out);
+}
+
 /* =========================================================
    KEYRING (DESKTOP ONLY)
 ========================================================= */
@@ -221,11 +307,12 @@ function decodeStoredBytes(value: unknown): string {
 
 async function initKeyringSession() {
   if (keyringSession && keyringClient) {
-    dbg("keyring: using cached session");
     return { session: keyringSession, client: keyringClient };
   }
 
-  const session = await step("KeyringSession.load", () =>
+  const { KeyringSession } = await import("tauri-plugin-keyring-store-api");
+
+  const session: any = await step("KeyringSession.load", () =>
     withTimeout(
       KeyringSession.load(KEYRING_SESSION_PATH, ""),
       10000,
@@ -233,7 +320,7 @@ async function initKeyringSession() {
     ),
   );
 
-  let client: Awaited<ReturnType<KeyringSession["createClient"]>>;
+  let client: any;
 
   try {
     client = await step("session.loadClient", () =>
@@ -253,27 +340,19 @@ async function initKeyringSession() {
 }
 
 /* =========================================================
-   KEY STORAGE
+   KEY STORAGE (TAURI ONLY)
    Mobile  -> Store plugin (the keyring plugin hangs on Android)
    Desktop -> OS keyring
 ========================================================= */
 
-async function getKeyStorage() {
+async function getTauriKeyStorage() {
   if (await isMobile()) {
-    dbg("key storage: Store plugin (mobile)");
-    const store = await getAppStore();
     return {
-      async get(key: string): Promise<string | null> {
-        return (await store.get<string>(key)) ?? null;
-      },
-      async put(key: string, text: string) {
-        await store.set(key, text);
-        await store.save();
-      },
+      get: (key: string) => kvGet<string>(key),
+      put: (key: string, text: string) => kvSet(key, text),
     };
   }
 
-  dbg("key storage: OS keyring (desktop)");
   const { client } = await initKeyringSession();
   const store = client.getStore();
   return {
@@ -296,21 +375,14 @@ async function getKeyStorage() {
 ========================================================= */
 
 export async function getSystemId(): Promise<string> {
-  if (systemIdCache) {
-    dbg("getSystemId: cached");
-    return systemIdCache;
-  }
+  if (systemIdCache) return systemIdCache;
 
   return await step("getSystemId", async () => {
-    const store = await getAppStore();
-
-    let systemId = await step("store.get systemId", () => store.get<string>(SYSTEM_ID_KEY));
+    let systemId = await kvGet<string>(SYSTEM_ID_KEY);
 
     if (!systemId) {
-      dbg("getSystemId: generating new id");
       systemId = generateSystemId();
-      await step("store.set systemId", () => store.set(SYSTEM_ID_KEY, systemId!));
-      await step("store.save systemId", () => store.save());
+      await kvSet(SYSTEM_ID_KEY, systemId);
     }
 
     systemIdCache = systemId;
@@ -319,104 +391,158 @@ export async function getSystemId(): Promise<string> {
 }
 
 /* =========================================================
-   GENERATE ED25519 KEYS
+   ED25519 KEYS
 ========================================================= */
 
-async function generateKeyPair() {
-  if (!crypto?.subtle) {
-    throw new Error(
-      "Web Crypto API is not available (isSecureContext=" +
-        (globalThis as any).isSecureContext +
-        ")",
-    );
+async function supportsNativeEd25519(): Promise<boolean> {
+  try {
+    if (!crypto?.subtle) return false;
+    await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
+    return true;
+  } catch {
+    return false;
   }
-
-  return await step("crypto.subtle.generateKey Ed25519", () =>
-    crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]),
-  );
 }
 
-/* =========================================================
-   GET OR CREATE KEY PAIR
-========================================================= */
+/* ---- Tauri: keys stored as JWK text in keyring / store ---- */
 
-async function loadOrCreateSoftwareKeys(): Promise<SoftwareKeys> {
-  const storage = await getKeyStorage();
+async function loadOrCreateTauriKeys(): Promise<SoftwareKeys> {
+  const storage = await getTauriKeyStorage();
 
-  const privateText = await step("storage get private", () =>
-    storage.get(PRIVATE_KEY_RECORD),
-  );
-  const publicText = await step("storage get public", () =>
-    storage.get(PUBLIC_KEY_RECORD),
-  );
+  const privateText = await storage.get(PRIVATE_KEY_RECORD);
+  const publicText = await storage.get(PUBLIC_KEY_RECORD);
 
   if (privateText && publicText) {
-    dbg("getSoftwareKeys: existing keys found");
-
-    const privateKey = await step("importKey private", () =>
-      crypto.subtle.importKey(
-        "jwk",
-        JSON.parse(privateText),
-        { name: "Ed25519" },
-        false,
-        ["sign"],
-      ),
+    const privateKey = await crypto.subtle.importKey(
+      "jwk",
+      JSON.parse(privateText),
+      { name: "Ed25519" },
+      false,
+      ["sign"],
     );
-
-    const publicKey = await step("importKey public", () =>
-      crypto.subtle.importKey(
-        "jwk",
-        JSON.parse(publicText),
-        { name: "Ed25519" },
-        true,
-        ["verify"],
-      ),
+    const publicKey = await crypto.subtle.importKey(
+      "jwk",
+      JSON.parse(publicText),
+      { name: "Ed25519" },
+      true,
+      ["verify"],
     );
+    const spki = await crypto.subtle.exportKey("spki", publicKey);
 
-    const spki = await step("exportKey spki", () =>
-      crypto.subtle.exportKey("spki", publicKey),
-    );
-
-    privateKeyCache = privateKey;
-
-    return { privateKey, publicKey, publicKeyPem: arrayBufferToPem(spki) };
+    return {
+      privateKey,
+      publicKey,
+      publicKeyPem: arrayBufferToPem(spki),
+      sign: (data) => crypto.subtle.sign({ name: "Ed25519" }, privateKey, data),
+    };
   }
 
-  /* First installation */
-  dbg("getSoftwareKeys: first install, generating keys");
+  const keyPair = (await crypto.subtle.generateKey({ name: "Ed25519" }, true, [
+    "sign",
+    "verify",
+  ])) as CryptoKeyPair;
 
-  const keyPair = await generateKeyPair();
+  const privateJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+  const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+  const spki = await crypto.subtle.exportKey("spki", keyPair.publicKey);
 
-  const privateJwk = await step("exportKey private jwk", () =>
-    crypto.subtle.exportKey("jwk", keyPair.privateKey),
-  );
-  const publicJwk = await step("exportKey public jwk", () =>
-    crypto.subtle.exportKey("jwk", keyPair.publicKey),
-  );
-  const spki = await step("exportKey public spki", () =>
-    crypto.subtle.exportKey("spki", keyPair.publicKey),
-  );
-
-  await step("storage put private", () =>
-    storage.put(PRIVATE_KEY_RECORD, JSON.stringify(privateJwk)),
-  );
-  await step("storage put public", () =>
-    storage.put(PUBLIC_KEY_RECORD, JSON.stringify(publicJwk)),
-  );
-
-  privateKeyCache = keyPair.privateKey;
+  await storage.put(PRIVATE_KEY_RECORD, JSON.stringify(privateJwk));
+  await storage.put(PUBLIC_KEY_RECORD, JSON.stringify(publicJwk));
 
   return {
     privateKey: keyPair.privateKey,
     publicKey: keyPair.publicKey,
     publicKeyPem: arrayBufferToPem(spki),
+    sign: (data) =>
+      crypto.subtle.sign({ name: "Ed25519" }, keyPair.privateKey, data),
   };
 }
 
-// Shares one in-flight load so two parallel callers never generate two key pairs
+/* ---- Web: CryptoKey (non-extractable) stored directly in IndexedDB ---- */
+
+type StoredWebSigner =
+  | { kind: "webcrypto"; privateKey: CryptoKey; publicKeyPem: string }
+  | { kind: "noble"; seed: Uint8Array; publicKeyPem: string };
+
+async function nobleSigner(seed: Uint8Array, publicKeyPem: string): Promise<SoftwareKeys> {
+  const ed = await import("@noble/ed25519");
+  return {
+    publicKeyPem,
+    sign: async (data) => toArrayBuffer(await ed.signAsync(data, seed)),
+  };
+}
+
+async function loadOrCreateWebKeys(): Promise<SoftwareKeys> {
+  if (!crypto?.subtle) {
+    throw new Error(
+      "Web Crypto is unavailable. The app must be served over HTTPS (or localhost).",
+    );
+  }
+
+  const stored = await idbGet<StoredWebSigner>(WEB_SIGNER_KEY);
+
+  if (stored?.kind === "webcrypto") {
+    const { privateKey, publicKeyPem } = stored;
+    return {
+      privateKey,
+      publicKeyPem,
+      sign: (data) => crypto.subtle.sign({ name: "Ed25519" }, privateKey, data),
+    };
+  }
+
+  if (stored?.kind === "noble") {
+    return nobleSigner(stored.seed, stored.publicKeyPem);
+  }
+
+  // First run on this browser
+  if (await supportsNativeEd25519()) {
+    // extractable=false: the private key can be used but never read out
+    const keyPair = (await crypto.subtle.generateKey({ name: "Ed25519" }, false, [
+      "sign",
+      "verify",
+    ])) as CryptoKeyPair;
+
+    const spki = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+    const publicKeyPem = arrayBufferToPem(spki);
+
+    await idbSet(WEB_SIGNER_KEY, {
+      kind: "webcrypto",
+      privateKey: keyPair.privateKey,
+      publicKeyPem,
+    } satisfies StoredWebSigner);
+
+    return {
+      privateKey: keyPair.privateKey,
+      publicKey: keyPair.publicKey,
+      publicKeyPem,
+      sign: (data) =>
+        crypto.subtle.sign({ name: "Ed25519" }, keyPair.privateKey, data),
+    };
+  }
+
+  // Older browsers without native Ed25519: pure-JS fallback
+  dbg("native Ed25519 not supported, using @noble/ed25519");
+  const ed = await import("@noble/ed25519");
+  const seed = crypto.getRandomValues(new Uint8Array(32));
+  const rawPublic = await ed.getPublicKeyAsync(seed);
+  const publicKeyPem = arrayBufferToPem(rawEd25519ToSpki(rawPublic));
+
+  await idbSet(WEB_SIGNER_KEY, {
+    kind: "noble",
+    seed,
+    publicKeyPem,
+  } satisfies StoredWebSigner);
+
+  return nobleSigner(seed, publicKeyPem);
+}
+
+/* ---- Entry point (one in-flight load, never two key pairs) ---- */
+
 export async function getSoftwareKeys(): Promise<SoftwareKeys> {
   if (!keysPromise) {
-    keysPromise = step("getSoftwareKeys", loadOrCreateSoftwareKeys).catch((err) => {
+    keysPromise = step("getSoftwareKeys", () =>
+      isTauri() ? loadOrCreateTauriKeys() : loadOrCreateWebKeys(),
+    ).catch((err) => {
       keysPromise = null; // allow retry after a failure
       throw err;
     });
@@ -429,33 +555,19 @@ export async function getSoftwareKeys(): Promise<SoftwareKeys> {
 ========================================================= */
 
 export async function saveInstallationId(installationId: string) {
-  await step("saveInstallationId", async () => {
-    const store = await getAppStore();
-    await store.set(INSTALLATION_ID_KEY, installationId);
-    await store.save();
-  });
+  await step("saveInstallationId", () => kvSet(INSTALLATION_ID_KEY, installationId));
 }
 
 export async function getInstallationId() {
-  return await step("getInstallationId", async () => {
-    const store = await getAppStore();
-    return await store.get<string>(INSTALLATION_ID_KEY);
-  });
+  return await step("getInstallationId", () => kvGet<string>(INSTALLATION_ID_KEY));
 }
 
 export async function saveLicenseInfo(license: unknown) {
-  await step("saveLicenseInfo", async () => {
-    const store = await getAppStore();
-    await store.set(LICENSE_INFO_KEY, license);
-    await store.save();
-  });
+  await step("saveLicenseInfo", () => kvSet(LICENSE_INFO_KEY, license));
 }
 
 export async function getLicenseInfo() {
-  return await step("getLicenseInfo", async () => {
-    const store = await getAppStore();
-    return await store.get(LICENSE_INFO_KEY);
-  });
+  return await step("getLicenseInfo", () => kvGet(LICENSE_INFO_KEY));
 }
 
 /* =========================================================
@@ -464,11 +576,14 @@ export async function getLicenseInfo() {
 
 export async function activateSoftware(token: string) {
   return await step("activateSoftware", async () => {
+    // Web only: ask the browser to keep our data (no-op on Tauri)
+    await requestPersistentStorage();
+
     const systemId = await getSystemId();
     const { publicKeyPem } = await getSoftwareKeys();
 
-    const platform = await step("getPlatform", () => getPlatform());
-    const appVersion = await step("getAppVersion", () => getAppVersion());
+    const platform = await currentPlatform();
+    const appVersion = await currentAppVersion();
 
     dbg("activate payload", { systemId, platform, appVersion, tokenLen: token.length });
 
@@ -494,7 +609,6 @@ export async function activateSoftware(token: string) {
 
     const response = res.data;
 
-    // then check the server's own { success } flag
     if (!response?.success) {
       throw new Error(response?.message || "Software activation failed.");
     }
@@ -530,14 +644,7 @@ export async function signRequest({
   bodyHash: string;
 }) {
   return await step("signRequest", async () => {
-    if (!privateKeyCache) {
-      dbg("signRequest: privateKeyCache empty, loading keys");
-      await getSoftwareKeys();
-    }
-
-    if (!privateKeyCache) {
-      throw new Error("Software private key is unavailable.");
-    }
+    const keys = await getSoftwareKeys();
 
     const message = [
       String(timestamp),
@@ -547,13 +654,7 @@ export async function signRequest({
       String(bodyHash),
     ].join("\n");
 
-    const signature = await step("crypto.subtle.sign", () =>
-      crypto.subtle.sign(
-        { name: "Ed25519" },
-        privateKeyCache!,
-        new TextEncoder().encode(message),
-      ),
-    );
+    const signature = await keys.sign(new TextEncoder().encode(message));
 
     return arrayBufferToBase64(signature);
   });
@@ -603,20 +704,21 @@ export async function softwareFetch<T = any>(
 
     const config = useRuntimeConfig();
     const apiUrl = String(config.public.apiUrl || "").replace(/\/$/, "");
-    dbg("softwareFetch apiUrl:", apiUrl);
 
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
 
-    // The backend signs only the pathname, not the query string
+    // The backend signs only the pathname, not the query string.
+    // The base lets this work when apiUrl is relative (e.g. "/api-proxy").
     let requestPath: string;
     try {
-      requestPath = new URL(`${apiUrl}${cleanPath}`).pathname;
+      const base =
+        typeof location !== "undefined" ? location.origin : "http://localhost";
+      requestPath = new URL(`${apiUrl}${cleanPath}`, base).pathname;
     } catch (e) {
-      dbgErr(`new URL("${apiUrl}${cleanPath}") - apiUrl may be empty/invalid on mobile`, e);
+      dbgErr(`new URL("${apiUrl}${cleanPath}")`, e);
       throw e;
     }
 
-    // Drop empty query values
     const query: Record<string, string> = {};
     for (const [key, value] of Object.entries(options.query || {})) {
       if (value !== undefined && value !== null) {
