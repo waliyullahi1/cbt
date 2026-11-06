@@ -864,11 +864,56 @@
           <!-- LESSON BLOCKS -->
           <div class="mt-6">
             <LessonBlock
-              v-for="(block, index) in currentLesson.blocks || []"
+              v-for="(block, index) in visibleLessonBlocks"
               :key="index"
               :block="block"
             />
           </div>
+
+          <div
+            v-if="hasLockedLessonContent"
+            class="mt-8 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-5 text-center sm:p-6"
+          >
+            <div
+              class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-white text-indigo-600 shadow-sm"
+            >
+              <Icon name="lucide:lock-keyhole" class="h-5 w-5" />
+            </div>
+
+            <h2 class="mt-3 text-base font-bold text-slate-900">
+              Unlock the full lesson
+            </h2>
+
+            <p class="mt-1 text-sm leading-6 text-slate-600">
+              Subscribe to read the remaining
+              {{ lockedLessonBlockCount }}
+              {{ lockedLessonBlockCount === 1 ? "section" : "sections" }} of this lesson.
+            </p>
+
+            <button
+              type="button"
+              class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/90"
+              @click="showSubscribePrompt = true"
+            >
+              <Icon name="lucide:crown" class="h-4 w-4" />
+              Subscribe to view full lesson
+            </button>
+          </div>
+
+          <SubscribePrompt
+            v-model="showSubscribePrompt"
+            title="Unlock the full lesson"
+            message="Subscribe to continue reading this lesson and unlock the full lesson library."
+            :perks="[
+              'Read every lesson from start to finish',
+              'Unlock all lesson sections',
+              'Track your lesson progress',
+            ]"
+            button-text="Subscribe Now"
+            dismiss-text="Keep reading preview"
+            to=""
+            @subscribe="goToActivation"
+          />
 
           <!-- =================================================== -->
           <!-- READING PROGRESS -->
@@ -1125,6 +1170,7 @@ import {
   onMounted,
   onBeforeUnmount,
 } from "vue";
+import { isSoftwareActivated } from "~/composables/useSoftwareSecurity";
 
 /*
 |--------------------------------------------------------------------------
@@ -1133,6 +1179,7 @@ import {
 */
 
 const route = useRoute();
+const appState = useAppState();
 
 /*
 |--------------------------------------------------------------------------
@@ -1215,6 +1262,33 @@ const searchTerm = ref("");
 
 const showSearchResults = ref(false);
 
+const isSubscribed = ref(isSoftwareActivated());
+const showSubscribePrompt = ref(false);
+
+const lessonBlocks = computed(() =>
+  Array.isArray(currentLesson.value?.blocks)
+    ? currentLesson.value.blocks
+    : [],
+);
+
+const freeLessonPreviewBlockCount = computed(() =>
+  Math.min(3, Math.max(0, lessonBlocks.value.length - 1)),
+);
+
+const visibleLessonBlocks = computed(() =>
+  isSubscribed.value
+    ? lessonBlocks.value
+    : lessonBlocks.value.slice(0, freeLessonPreviewBlockCount.value),
+);
+
+const lockedLessonBlockCount = computed(
+  () => lessonBlocks.value.length - visibleLessonBlocks.value.length,
+);
+
+const hasLockedLessonContent = computed(
+  () => !isSubscribed.value && lockedLessonBlockCount.value > 0,
+);
+
 const prevLesson = ref<any>(null);
 
 const nextLesson = ref<any>(null);
@@ -1295,6 +1369,7 @@ const observeLessonCompletion = async () => {
 
   if (
     !import.meta.client ||
+    !isSubscribed.value ||
     lessonLoading.value ||
     lessonNotFound.value ||
     !currentLesson.value ||
@@ -2010,6 +2085,12 @@ const goHome = () => {
   navigateTo("/");
 };
 
+const goToActivation = async () => {
+  appState.value.currentPage = "ACTIVATEPRODUCT";
+  appState.value.showSecond = true;
+  await navigateTo("/");
+};
+
 /*
 |--------------------------------------------------------------------------
 | VISIBILITY
@@ -2092,6 +2173,7 @@ watch(
     currentLesson.value?.slug,
     lessonLoading.value,
     lessonNotFound.value,
+    isSubscribed.value,
     isLessonRead(
       currentSubjectKey.value,
       currentLesson.value,
@@ -2110,6 +2192,7 @@ watch(
 */
 
 onMounted(async () => {
+  isSubscribed.value = isSoftwareActivated();
   loadLessonProgress();
 
   if (import.meta.client) {
