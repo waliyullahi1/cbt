@@ -36,6 +36,10 @@ export default defineNuxtConfig({
   pwa: {
     registerType: "autoUpdate",
 
+    devOptions: {
+      enabled: false,
+    },
+
     manifest: {
       id: "/",
       name: "ExamTips",
@@ -274,6 +278,9 @@ export default defineNuxtConfig({
         "@tauri-apps/plugin-fs",
         "@tauri-apps/plugin-sql",
         "tauri-plugin-keyring-store-api",
+        "highlight.js/lib/common",
+        "katex",
+        "katex/contrib/mhchem",
       ],
     },
   },
