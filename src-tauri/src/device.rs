@@ -151,10 +151,6 @@ pub fn get_machine_identifier() -> Result<String, String> {
 pub fn create_device_id() -> Result<String, String> {
     let machine_id = get_machine_identifier()?;
 
-    Ok(hash_machine_identifier(&machine_id))
-}
-
-pub fn hash_machine_identifier(machine_id: &str) -> String {
     let mut hasher = Sha256::new();
 
     // Application-specific namespace.
@@ -168,5 +164,5 @@ pub fn hash_machine_identifier(machine_id: &str) -> String {
 
     let result = hasher.finalize();
 
-    hex::encode(result)
+    Ok(hex::encode(result))
 }

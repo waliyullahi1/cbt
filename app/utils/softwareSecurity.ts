@@ -60,7 +60,7 @@ async function isMobile(): Promise<boolean> {
    DEBUG HELPERS
 ========================================================= */
 
-const DEBUG = false;
+const DEBUG = true;
 const TAG = "[ABANISE-SEC]";
 
 function dbg(...args: any[]) {
@@ -69,7 +69,6 @@ function dbg(...args: any[]) {
 }
 
 function dbgErr(label: string, err: any) {
-  if (!DEBUG) return;
   console.error(
     TAG,
     `FAIL ${label}:`,
@@ -391,64 +390,6 @@ export async function getSystemId(): Promise<string> {
   });
 }
 
-type DeviceIdentity = {
-  hardwareId: string | null;
-  deviceFingerprint: string | null;
-  deviceLabel: string;
-};
-
-async function getBrowserDeviceFingerprint(): Promise<string> {
-  const identity = {
-    platform: navigator.platform || "unknown",
-    hardwareConcurrency: navigator.hardwareConcurrency || null,
-    deviceMemory:
-      "deviceMemory" in navigator
-        ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory || null
-        : null,
-    maxTouchPoints: navigator.maxTouchPoints || 0,
-  };
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(JSON.stringify(identity)),
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function getDeviceLabel(platform: string): string {
-  if (platform === "web") {
-    return navigator.platform
-      ? `Web (${navigator.platform})`
-      : "Web browser";
-  }
-  return `${platform.charAt(0).toUpperCase()}${platform.slice(1)} device`;
-}
-
-async function getDeviceIdentity(): Promise<DeviceIdentity> {
-  const platform = await currentPlatform();
-
-  if (isTauri() && platform !== "ios") {
-    const { invoke } = await import("@tauri-apps/api/core");
-    const hardwareId = await invoke<string>("get_device_id");
-    if (!hardwareId.trim()) {
-      throw new Error("Unable to read this device's hardware identifier.");
-    }
-
-    return {
-      hardwareId,
-      deviceFingerprint: null,
-      deviceLabel: getDeviceLabel(platform),
-    };
-  }
-
-  return {
-    hardwareId: null,
-    deviceFingerprint: await getBrowserDeviceFingerprint(),
-    deviceLabel: getDeviceLabel(platform),
-  };
-}
-
 /* =========================================================
    ED25519 KEYS
 ========================================================= */
@@ -640,10 +581,11 @@ export async function activateSoftware(token: string) {
 
     const systemId = await getSystemId();
     const { publicKeyPem } = await getSoftwareKeys();
-    const deviceIdentity = await getDeviceIdentity();
 
     const platform = await currentPlatform();
     const appVersion = await currentAppVersion();
+
+    dbg("activate payload", { systemId, platform, appVersion, tokenLen: token.length });
 
     const res = await step("POST /api/software/activate", () =>
       useApiFetch<any>("/api/software/activate", {
@@ -654,10 +596,11 @@ export async function activateSoftware(token: string) {
           publicKey: publicKeyPem,
           platform,
           appVersion,
-          ...deviceIdentity,
         },
       }),
     );
+
+    dbg("activate transport result:", JSON.stringify(res)?.slice(0, 500));
 
     // useApiFetch never throws, so check the transport result first
     if (!res.success) {
@@ -681,23 +624,6 @@ export async function activateSoftware(token: string) {
 
     return response.data;
   });
-}
-
-export async function bindSoftwareDevice() {
-  const deviceIdentity = await getDeviceIdentity();
-  const response = await softwareFetch<any>("/api/software/bind-device", {
-    method: "POST",
-    body: deviceIdentity,
-  });
-
-  if (!response?.success || !response.data?.license) {
-    throw new Error(
-      response?.message || "Unable to bind this installation to its device.",
-    );
-  }
-
-  await saveLicenseInfo(response.data.license);
-  return response.data.license;
 }
 
 /* =========================================================

@@ -1297,6 +1297,11 @@ const activateWithKey = async () => {
     showMessage(syncSuccess.value, 'success')
 
   } catch (error) {
+
+    console.error('Activation or content download failed:', error)
+
+
+
     showMessage(
 
       error?.data?.message ||

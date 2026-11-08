@@ -55,9 +55,6 @@ pub fn run() {
         // Desktop-only: mobile operating systems manage app instances.
         ;
 
-    #[cfg(target_os = "android")]
-    let builder = builder.plugin(commands::android_device_plugin());
-
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let builder = builder.plugin(
             tauri_plugin_single_instance::init(
