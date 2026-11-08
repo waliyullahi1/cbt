@@ -100,6 +100,88 @@ import {
   getCurrentWindow,
 } from "@tauri-apps/api/window"
 
+import {
+  getAppVersion,
+  getPlatform,
+} from "~/utils/deviceInfo"
+
+const runtimeConfig = useRuntimeConfig()
+
+const analyticsInstallationKey = "examtips_analytics_installation"
+const analyticsFirstOpenRecordedKey = "examtips_analytics_first_open_recorded"
+
+function getBrowserDevicePlatform(): string {
+  const userAgent = navigator.userAgent.toLowerCase()
+
+  if (
+    /iphone|ipad|ipod/.test(userAgent) ||
+    (userAgent.includes("macintosh") && navigator.maxTouchPoints > 1)
+  ) {
+    return "ios"
+  }
+  if (userAgent.includes("android")) return "android"
+  if (userAgent.includes("windows")) return "windows"
+  if (/macintosh|mac os/.test(userAgent)) return "macos"
+  if (userAgent.includes("linux")) return "linux"
+
+  return "other"
+}
+
+async function recordSuccessfulAppOpen(): Promise<void> {
+  if (!import.meta.client) return
+
+  try {
+    let platform: string
+    let source: string
+
+    if (isTauri()) {
+      platform = await getPlatform()
+      source = "native-app"
+    } else {
+      const installedPwa =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (navigator as Navigator & { standalone?: boolean }).standalone === true
+
+      if (!installedPwa) return
+
+      platform = getBrowserDevicePlatform()
+      source = "installed-pwa"
+    }
+
+    if (localStorage.getItem(analyticsFirstOpenRecordedKey) === "1") {
+      return
+    }
+
+    let installationId = localStorage.getItem(analyticsInstallationKey)
+    if (!installationId) {
+      installationId = crypto.randomUUID()
+      localStorage.setItem(analyticsInstallationKey, installationId)
+    }
+
+    const response = await $fetch<{ success: boolean }>(
+      `${runtimeConfig.public.apiUrl}/api/analytics/software/app-first-open`,
+      {
+        method: "POST",
+        body: {
+          installationId,
+          platform,
+          version: await getAppVersion(),
+          source,
+        },
+        timeout: 3000,
+      },
+    )
+
+    if (response?.success !== true) {
+      throw new Error("The server did not confirm app-open analytics.")
+    }
+
+    localStorage.setItem(analyticsFirstOpenRecordedKey, "1")
+  } catch (error) {
+    console.warn("Could not record the successful app open:", error)
+  }
+}
+
 
 /* =========================================================
    LOGO SIZE  (change these two values)
@@ -506,6 +588,7 @@ async function initializeApp(): Promise<void> {
     startupStep.value = "Opening ExamTips..."
     startupReady.value = true
 
+    void recordSuccessfulAppOpen()
     startDatabaseCopyInBackground()
     startupLog("Browser/PWA startup completed successfully")
 
@@ -558,6 +641,7 @@ async function initializeApp(): Promise<void> {
       startupStep.value = "Opening ExamTips..."
 
       startupReady.value = true
+      void recordSuccessfulAppOpen()
       startDatabaseCopyInBackground()
 
       startupLog(
@@ -701,6 +785,7 @@ async function initializeApp(): Promise<void> {
       await invoke("show_main_window")
 
       startupReady.value = true
+      void recordSuccessfulAppOpen()
       startDatabaseCopyInBackground()
 
       startupLog(
@@ -722,6 +807,7 @@ async function initializeApp(): Promise<void> {
     }
 
     startupReady.value = true
+    void recordSuccessfulAppOpen()
     startDatabaseCopyInBackground()
   } catch (error) {
     startupLogError(
