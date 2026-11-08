@@ -3,6 +3,7 @@ import {
   getSystemId,
   getInstallationId,
   getLicenseInfo,
+  bindSoftwareDevice,
   softwareFetch,
 } from "~/utils/softwareSecurity";
 
@@ -55,6 +56,10 @@ export const useSoftwareSecurity =
           if (softwareActivated) {
             systemId.value =
               await getSystemId();
+
+            if (!license.value?.deviceBound) {
+              license.value = await bindSoftwareDevice();
+            }
           }
         })().catch((error) => {
           initializationPromise = null;
@@ -74,13 +79,10 @@ export const useSoftwareSecurity =
     async function activate(
       token: string,
     ) {
-      console.log('fasasasasasaasssssssssssa');
-
       const data =
         await activateSoftware(
           token,
         );
-      console.log('fasasasasasaasssssssssssa2');
 
       installationId.value =
         data?.installationId ||
@@ -93,7 +95,6 @@ export const useSoftwareSecurity =
 
       systemId.value =
         await getSystemId();
-      console.log('systemId.valuesystemId.value');
 
       return data;
     }
