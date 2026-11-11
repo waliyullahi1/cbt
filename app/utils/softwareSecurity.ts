@@ -587,100 +587,6 @@ export async function activateSoftware(token: string) {
 
     dbg("activate payload", { systemId, platform, appVersion, tokenLen: token.length });
 
-    if (!isTauri()) {
-      const optionsResult = await useApiFetch<any>("/api/software/pwa/options", {
-        method: "POST",
-        body: {
-          token: token.trim().toUpperCase(),
-          systemId,
-          publicKey: publicKeyPem,
-          platform,
-          appVersion,
-        },
-      });
-      if (!optionsResult.success) {
-        throw new Error(optionsResult.message || "Unable to prepare device verification.");
-      }
-
-      const optionsEnvelope = optionsResult.data;
-      if (!optionsEnvelope?.success) {
-        throw new Error(optionsEnvelope?.message || "Unable to prepare device verification.");
-      }
-
-      const activationOptions = optionsEnvelope.data;
-      let responseData: any;
-      let nextOptions = activationOptions;
-      while (nextOptions.mode !== "existing") {
-        const { mode, options } = nextOptions;
-        if (mode === "identity") {
-          const signature = await signInstallationChallenge(nextOptions.challenge);
-          const identityResult = await useApiFetch<any>("/api/software/pwa/verify", {
-            method: "POST",
-            body: {
-              token: token.trim().toUpperCase(),
-              systemId,
-              publicKey: publicKeyPem,
-              operation: "identity",
-              challenge: nextOptions.challenge,
-              signature,
-            },
-          });
-          if (!identityResult.success) {
-            throw new Error(identityResult.message || "Existing PWA verification failed.");
-          }
-          if (!identityResult.data?.success) {
-            throw new Error(identityResult.data?.message || "Existing PWA verification failed.");
-          }
-          nextOptions = identityResult.data.data;
-          continue;
-        }
-
-        const { startRegistration, startAuthentication } =
-          await import("@simplewebauthn/browser");
-        const credentialResponse =
-          mode === "register"
-            ? await startRegistration({ optionsJSON: options })
-            : mode === "authenticate"
-              ? await startAuthentication({ optionsJSON: options })
-              : null;
-        if (!credentialResponse) {
-          throw new Error("The server returned an unsupported device verification mode.");
-        }
-
-        const verifyResult = await useApiFetch<any>("/api/software/pwa/verify", {
-          method: "POST",
-          body: {
-            token: token.trim().toUpperCase(),
-            systemId,
-            publicKey: publicKeyPem,
-            platform,
-            appVersion,
-            operation: mode,
-            challenge: options.challenge,
-            response: credentialResponse,
-          },
-        });
-        if (!verifyResult.success) {
-          throw new Error(verifyResult.message || "Device verification failed.");
-        }
-        if (!verifyResult.data?.success) {
-          throw new Error(verifyResult.data?.message || "Device verification failed.");
-        }
-        responseData = verifyResult.data.data;
-        break;
-      }
-      if (nextOptions.mode === "existing") responseData = nextOptions;
-
-      const installationId = responseData?.installationId;
-      if (installationId) {
-        await saveInstallationId(String(installationId));
-      }
-      if (responseData?.license) {
-        await saveLicenseInfo(responseData.license);
-      }
-      return responseData;
-    }
-
     const res = await step("POST /api/software/activate", () =>
       useApiFetch<any>("/api/software/activate", {
         method: "POST",
@@ -718,12 +624,6 @@ export async function activateSoftware(token: string) {
 
     return response.data;
   });
-}
-
-export async function signInstallationChallenge(challenge: string) {
-  const keys = await getSoftwareKeys();
-  const signature = await keys.sign(new TextEncoder().encode(challenge));
-  return arrayBufferToBase64(signature);
 }
 
 /* =========================================================
