@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 const host = process.env.TAURI_DEV_HOST;
 const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
-
+console.log("API URL from env:", process.env.NUXT_PUBLIC_API_URL);
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
 

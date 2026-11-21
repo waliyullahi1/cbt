@@ -405,6 +405,12 @@
           >
             <Bookmarks @gohome="closeBook" />
           </div>
+          <div
+            v-else-if="appState.currentPage === 'ExamRuiz'"
+            class="min-h-full w-full max-w-full min-w-0 overflow-x-hidden"
+          >
+            <ExamRuiz @gohome="closeBook" />
+          </div>
 
           <!-- PROFILE (placeholder until you build the page) -->
           <div
@@ -412,6 +418,13 @@
             class="min-h-full w-full max-w-full min-w-0 overflow-x-hidden"
           >
          <UserProfile @gohome="closeBook" />
+          </div>
+
+          <div
+            v-else-if="appState.currentPage === 'TEACHERMARKETPLACE'"
+            class="min-h-full w-full max-w-full min-w-0 overflow-x-hidden"
+          >
+         <TeacherMarketPlace @gohome="closeBook" />
           </div>
         </section>
 
@@ -500,6 +513,8 @@ const dashboardItems = [
     route: "/practice/utme",
     component: "UTME",
   },
+   
+
 
   {
     title: "Classroom",
@@ -560,6 +575,31 @@ const dashboardItems = [
     route: "/leaderboard",
     component: "LEADERBOARD",
   },
+
+
+{
+  title: "Exam Runz",
+  description: "Access exam preparation resources and practice questions.",
+  shortDescription: "Prepare smarter and improve your exam performance.",
+  icon: "ph:exam",
+  class: "bg-purple-100 text-purple-900",
+  circle: "bg-[#EDE9FE]",
+  iconColor: "text-[#7C3AED]",
+  route: "/practice/utme",
+  component: "ExamRuiz",
+},
+{
+  title: "Teacher Market",
+  description: "Discover teachers and connect with qualified tutors.",
+  shortDescription: "Find experienced teachers for your preferred subjects.",
+  icon: "ph:users-three",
+  class: "bg-pink-100 text-pink-900",
+  circle: "bg-[#FCE7F3]",
+  iconColor: "text-[#DB2777]",
+  route: "/teacher-market",
+  component: "TEACHERMARKETPLACE",
+}
+
 ]
 
 // ============================================================
@@ -633,6 +673,7 @@ const quickAccess = [
     title: "Teachers",
     description: "Find expert teachers",
   },
+  
 ]
 
 // ============================================================
@@ -679,6 +720,7 @@ const tabs = [
     iconActive: "ph:user-fill",
     component: "PROFILE",
   },
+  
 ]
 
 const activeTab = computed(() =>

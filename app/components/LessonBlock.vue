@@ -331,6 +331,23 @@
   </component>
 
   <!-- ===================================================== -->
+  <!-- EXAM INSTRUCTION -->
+  <!-- ===================================================== -->
+
+  <div
+    v-else-if="block.type === 'instruction'"
+    class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 sm:px-4 sm:py-4"
+  >
+    <div class="mb-1 text-[13px] font-bold text-amber-900 sm:text-sm">
+      {{ block.title || 'Instructions' }}
+    </div>
+    <div
+      class="lesson-text text-amber-950"
+      v-html="block.text_html || block.text"
+    ></div>
+  </div>
+
+  <!-- ===================================================== -->
   <!-- QUESTION -->
   <!-- ===================================================== -->
 
@@ -356,6 +373,21 @@
         class="lesson-text text-slate-700"
         v-html="block.text_html || block.text"
       ></div>
+
+      <ol
+        v-if="block.options?.length"
+        class="mt-3 space-y-2"
+        aria-label="Question answer options"
+      >
+        <li
+          v-for="(option, index) in block.options"
+          :key="`${option.label || 'option'}-${index}`"
+          class="flex gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+        >
+          <span class="font-semibold">{{ option.label || String.fromCharCode(65 + index) }}.</span>
+          <span v-html="option.text_html || option.text"></span>
+        </li>
+      </ol>
 
       <div v-if="block.math?.latex" class="math-box">
         <div
@@ -387,6 +419,16 @@
       class="lesson-text text-slate-700"
       v-html="block.text_html || block.text"
     ></div>
+
+    <div v-if="block.explanation" class="mt-3 border-t border-blue-100 pt-3">
+      <p class="mb-1 text-xs font-bold uppercase tracking-wide text-[#0B2F6B]">
+        Explanation
+      </p>
+      <div
+        class="lesson-text text-slate-700"
+        v-html="block.explanation"
+      ></div>
+    </div>
 
     <div v-if="block.math?.latex" class="math-box math-box--on-tint">
       <div
