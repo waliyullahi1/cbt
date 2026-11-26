@@ -1,8 +1,11 @@
 package com.virex.cbt
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.DisplayMetrics
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -17,6 +20,14 @@ class MainActivity : TauriActivity() {
   inner class SplashBridge {
     @JavascriptInterface
     fun ready() { appReady = true }
+  }
+
+  // Ignore the phone's Font size and Display size settings
+  override fun attachBaseContext(newBase: Context) {
+    val config = Configuration(newBase.resources.configuration)
+    config.fontScale = 1.0f
+    config.densityDpi = DisplayMetrics.DENSITY_DEVICE_STABLE
+    super.attachBaseContext(newBase.createConfigurationContext(config))
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,8 +58,14 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
 
+    // Ignore the phone's font size setting inside the web content
+    webView.settings.textZoom = 100
+
     // Removes the white or black flash while the page is loading
     webView.setBackgroundColor(0xFFEEF5FF.toInt())
     webView.addJavascriptInterface(SplashBridge(), "SplashBridge")
+
+    // Background update download + install
+    webView.addJavascriptInterface(AppUpdater(this), "AppUpdater")
   }
 }

@@ -1,9 +1,9 @@
-
 import tailwindcss from "@tailwindcss/vite";
 
 const host = process.env.TAURI_DEV_HOST;
 const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
 console.log("API URL from env:", process.env.NUXT_PUBLIC_API_URL);
+
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
 
@@ -82,8 +82,7 @@ export default defineNuxtConfig({
         "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,avif,woff,woff2,ttf,webmanifest,db}",
       ],
 
-      maximumFileSizeToCacheInBytes:
-        50 * 1024 * 1024,
+      maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
 
       cleanupOutdatedCaches: true,
 
@@ -277,6 +276,7 @@ export default defineNuxtConfig({
         "@tauri-apps/plugin-store",
         "@tauri-apps/plugin-fs",
         "@tauri-apps/plugin-sql",
+        "@tauri-apps/plugin-http",
         "tauri-plugin-keyring-store-api",
         "highlight.js/lib/common",
         "katex",
@@ -295,6 +295,7 @@ export default defineNuxtConfig({
     clientBundle: {
       scan: true,
       includeCustomCollections: true,
+      icons: ["logos:google-icon"],
     },
   },
 
@@ -317,10 +318,7 @@ export default defineNuxtConfig({
 
     public: {
       projectName: "ExamTips",
-
-      apiUrl:
-        process.env.NUXT_PUBLIC_API_URL ||
-        "https://www.api.examtips.abanise.com",
+      apiUrl: "https://www.api.examtips.abanise.com",
     },
   },
 

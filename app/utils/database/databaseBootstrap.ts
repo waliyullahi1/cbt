@@ -207,7 +207,7 @@ async function initializeBundledDatabasesOnce(): Promise<void> {
     ),
   )
 
-  const cacheVersion = `${await getVersion()}-2`
+ const cacheVersion = `${await getVersion()}-3`
   const cacheVersionPath = await join(appConfig, cacheVersionFileName)
   const versionExists = await exists(cacheVersionPath)
   const installedVersion = versionExists

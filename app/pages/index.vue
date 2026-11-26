@@ -578,7 +578,7 @@ const dashboardItems = [
 
 
 {
-  title: "Exam Runz",
+  title: "Past Question",
   description: "Access exam preparation resources and practice questions.",
   shortDescription: "Prepare smarter and improve your exam performance.",
   icon: "ph:exam",

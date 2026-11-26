@@ -8,7 +8,7 @@ import { isSoftwareActivated } from "~/composables/useSoftwareSecurity"
 // ✅ loadDatabase = Tauri SQL in the app, SQLite WASM in the browser
 import { loadDatabase, isTauriApp } from "~/utils/web/webSqlite"
 import { getIsCopyFinished } from "~/utils/database/databaseCopyState"
-
+import { initializeBundledDatabases } from "~/utils/database/databaseBootstrap"
 type DatabaseName =
   | "cbt.db"
   | "questions.db"
@@ -1106,10 +1106,12 @@ async function openBundledContentDatabase(
   }
 
   if (!bundledContentPromises[name]) {
-    bundledContentPromises[name] = (async () => {
-      const connectionString = isTauriApp()
-        ? `sqlite:${await resolveResource(`resources/${name}`)}?mode=ro`
-        : `sqlite:bundled-${name}?mode=ro`
+        bundledContentPromises[name] = (async () => {
+      if (isTauriApp()) {
+        await initializeBundledDatabases()
+      }
+
+      const connectionString = `sqlite:bundled-${name}?mode=ro`
 
       // ✅ WEB CHANGE 5 of 5
       // Was: const db = await Database.load(connectionString)
@@ -1244,12 +1246,14 @@ export function getLessonsDB(): Promise<SqlDatabase> {
 // ============================================================
 
 export async function getDictDB(): Promise<SqlDatabase> {
+  if (isTauriApp()) {
+    await initializeBundledDatabases()
+  }
+
   return openAndInitializeDatabase(
     "dictionary.db",
     initializeDictionaryDatabase,
-    isTauriApp()
-      ? `sqlite:${await resolveResource("resources/dictionary.db")}?mode=ro`
-      : "sqlite:bundled-dictionary.db?mode=ro",
+    "sqlite:bundled-dictionary.db?mode=ro",
     true,
   )
 }

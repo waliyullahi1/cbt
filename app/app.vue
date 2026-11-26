@@ -49,7 +49,7 @@
     v-else 
     class="pt-[env(safe-area-inset-top)] h-dvh w-dvw overflow-hidden"
   >
-  
+   <UpdateBanner />
     <NuxtLayout>
       
       <NuxtPage />
@@ -63,6 +63,7 @@
 import {
   onMounted,
   ref,
+  watch
 } from "vue"
 
 import {
@@ -258,6 +259,8 @@ function clearReadyFlag(): void {
 
 const auth = useExamTipsAuth()
 const software = useSoftwareSecurity()
+const { init: initAppUpdate } = useAppUpdate()
+
 
 const startupReady = ref(false)
 const startupStep = ref("Preparing ExamTips...")
@@ -287,7 +290,10 @@ useHead({
 /* =========================================================
    LOGGING
 ========================================================= */
-
+// Start checking for app updates once startup has finished
+watch(startupReady, (ready) => {
+  if (ready) initAppUpdate()
+})
 function startupLog(
   message: string,
   details?: unknown,
